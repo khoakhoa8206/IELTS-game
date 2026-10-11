@@ -133,7 +133,7 @@ test('luồng giáo viên → học sinh', async () => {
   assert.equal((await H('/api/avatar', { avatar: { gender: 'boy', hairStyle: 'spiky', hair: '#5B3A1A', skin: '#ffd7b5', top: 'hoodie', color: '#2fb344', shoes: 'boot', shoeColor: '#1d1a2f', hat: 'crown', glasses: 'laser', x: 'y' } })).status, 200);
   const me = (await H('/api/me')).data;
   assert.deepEqual(me.me.avatar, { gender: 'boy', hairStyle: 'spiky', top: 'hoodie', bottom: 'pants', shoes: 'boot', hat: 'crown', glasses: 'none', beard: 'none',
-    hair: '#5b3a1a', skin: '#ffd7b5', color: '#2fb344', bottomColor: '#2f3a56', shoeColor: '#1d1a2f', hatColor: '#ef4b4b' }); // lựa chọn lạ ("laser") bị bỏ
+    hair: '#5b3a1a', skin: '#ffd7b5', color: '#2fb344', bottomColor: '#2f3a56', shoeColor: '#1d1a2f', hatColor: '#ef4b4b', eyeColor: '#6a5aa8' }); // lựa chọn lạ ("laser") bị bỏ
   assert.equal(me.assignments.length, 5); assert.equal(me.hearts, 3);
   const r1 = me.assignments.find(a => a.id === 'read1');
   assert.ok(r1.groups.every(g => g.items.every(it => !('answer' in it))));

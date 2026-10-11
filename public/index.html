@@ -23,6 +23,7 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;font-family:var(--vt);font-size:24px;line-height:1.1;color:var(--ink);background:var(--grass);background-image:var(--grass-tile,none);background-size:64px 64px;image-rendering:pixelated;min-height:100vh}
 button,input,select,textarea{font:inherit;color:inherit}
 .spr{image-rendering:pixelated;display:inline-block;vertical-align:middle}
+.spr.sm{image-rendering:auto} /* thu nhỏ nhân vật: làm mịn để không mất nét */
 .px{font-family:var(--px);font-weight:400}
 :focus-visible{outline:4px solid #1e6fe0;outline-offset:3px}
 
@@ -243,7 +244,7 @@ button.who{border:0;cursor:pointer;font-family:var(--vt);color:var(--ink)}
 .g-s{font-size:23px;line-height:1.15;display:flex;gap:8px;align-items:center;justify-content:center}
 .trophy{z-index:5;pointer-events:none}
 .trophy.shine{animation:bob .6s steps(2) infinite;filter:drop-shadow(0 0 10px #ffe36e)}
-.avatar{z-index:8;pointer-events:none;width:64px;animation:bob .5s steps(2) infinite}
+.avatar{z-index:8;pointer-events:none;animation:bob .5s steps(2) infinite}
 .empty-note{z-index:5;text-align:center;font-size:24px}
 .empty-note p{font:600 16px/1.5 var(--read);margin:8px 0 0}
 
@@ -450,7 +451,7 @@ button.who{border:0;cursor:pointer;font-family:var(--vt);color:var(--ink)}
   .exm{padding:10px 8px 8px}
   .exm-bubble{padding:8px 10px;min-height:80px}
   .exm-text{font-size:17px;min-height:48px}
-  .exm-face{width:186px}
+  .exm-face{width:250px}
   .steps{gap:4px}
   .step{width:40px;height:40px;margin:3px;font-size:12px}
   .rec-btn{padding:14px 22px;font-size:24px;margin:10px auto}
@@ -717,33 +718,42 @@ SP.head=mk(['...KKKKKK...','..KKBBBBKK..','.KKB....BKK.','.KB......BK.','KKB....
 SP.pencil=mk(['.........KK.','........KPPK','.......KPPKK','......KYYK..','.....KYYK...','....KYYK....','...KYYK.....','..KYYK......','.KSSK.......','KSKK........','KKK.........']);
 SP.mic=mk(['...KKKK...','..KCCCCK..','..KCWCCK..','..KCCCCK..','..KCCCCK..','K.KCCCCK.K','K.KKKKKK.K','KK......KK','.KKKKKKKK.','....KK....','....KK....','..KKKKKK..'],{C:'#ef4b4b',W:'#ffb4b4'});
 SP.bolt=mk(['...KK.','..KYK.','.KYYK.','KYYYYK','.KKYK.','..KYK.','..KK..']);
+// lớp nhân vật gốc (character_layers.zip, male_layers.zip), khổ 80×112, nén RLE: ký tự = vai trò màu, số = số điểm lặp
+const AV_LAYERS={"shadow":".8344z33.39z49.29z53.29z49.39z33.263","body":".3475s11.69s11.69s11.69s11.69s11.66S17.62S19.53S.5S23.5S.44S3.3S25.3S3.42S5.S27.S5.41S5.S27.S5.41S5.S27.S5.40S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.38S7sS27sS7.38S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.39S6sS27sS6.40S5.S27.S5.41S5.S27.S5.41S5.S27.S5.41S5.S27.S5.40S41.39S41.39S41.40S5.29S5.43S.33S.455S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.65S5s.3S5s.912","headF":".1000S.72S7tS7.62S9tStS9.57S10tS3tS10.53S12tS3tS12.50S10t3S5t3S10.48S9t2S11t2S9.46S9tS15tS9.44S9tS17tS9.42S10tS17tS10.40S10tS19tS10.39S5t5S21t5S5.38S5tS31tS5.37S4tS33tS4.37S4tS33tS4.37S3tS35tS3.37S3tS35tS3.36S4tS35tS4.36S2tS37tS2.37S2tS37tS2.37S3tS35tS3.37S3tS35tS3.37S3tS35tS3.38S2tS35tS2.39S2tS35tS2.40StS35tS.42tS35t.44S35.46S33.48S31.50S29.53S25.57S21.62S15.72S.5239","headM":".1000S.72S7tS7.62S9tStS9.57S10tS3tS10.53S12tS3tS12.50S10t3S5t3S10.48S9t2S11t2S9.46S9tS15tS9.44S9tS17tS9.42S10tS17tS10.40S10tS19tS10.39S5t5S21t5S5.38S5tS31tS5.37S4tS33tS4.37S4tS33tS4.37S3tS35tS3.37S3tS35tS3.36S4tS35tS4.36S2tS37tS2.37S2tS37tS2.34S4tS39tS4.31S4tS39tS4.30S4tS41tS4.29t2st2S41t2st2.29S51.30S3.2S39.2S3.31S3.3S37.3S3.38S35.46S33.48S31.50S29.53S25.57S21.62S15.72S.5239","eyesF":".2105K9.13K9.48K10.13K10.47K.2A5.17A5.2K.49AW2A4.15AW2A4.51AW2A4.15AW2A4.51A7.15A7.51A7.15A7.51B7.15B7.51B7.15B7.51B4WB2.15B4WB2.52B5.17B5.54B3.19B3.5947","eyesM":".1945D9.13D9.49D9.13D9.49K9.13K9.48K10.13K10.47K.2A5.17A5.2K.49AW2A4.15AW2A4.51AW2A4.15AW2A4.51A7.15A7.51A7.15A7.51B7.15B7.51B7.15B7.51B4WB2.15B4WB2.52B5.17B5.54B3.19B3.5947","faceF":".2920n.64p.29p.46p7.23p7.42p9.21p9.42p7.23p7.46p.29p.5624","faceM":".2920n.142p5.25p5.44p7.23p7.44p5.25p5.5702","mouth":".3237m.5m.74m5.5637","mouthO":".3237mW5m.73mrg3rm.74m5.5557","hbF":".353H15.62H21.56H27.52H29.49H33.46H35.43H39.40H41.38H43.37H43.36H45.34H47.33H47.32H49.30H51.29H51.29H51.28H53.27H53.27H53.27H53.27H53.27H53.27H53.27H53.27H53.27H53.27H53.27H53.27H53.28H51.29H51.29H51.30H49.32H47.33H47.34H45.36H43.37H43.38H41.40H39.41H39.41H39.40H41.38H43.37H43.36H45.35H45.35H45.35H45.35H45.35H45.35H45.35H45.35H45.36H43.37H43.38H41.40H39.41H39.43H35.46H33.48H31.51H27.55H23.60H17.3391","hfF":".352H17.60H23.55H27.51H31.47H35.44H37.42H10L4H11L4H10.40H7L4HLHLH11LHLHL4H7.38H4L4HLHLH9DH9LHLHL4H4.36H4LHLHLH12D.DH12LHLHLH4.34H5LH15D.3DH15LH5.32H22D.3DH22.31H19D3.5D3H19.30H18D2.11D2H18.29H17D.15DH17.29H16D.17DH16.28H17D.17DH17.27H16D.19DH16.27H11D5.21D5H11.27H10D.31DH10.27H9D.33DH9.28H8D.33DH8.30H6D.35DH6.30H7D.35DH7.29H7D.35DH7.29H6D.37DH6.29H6D.37DH6.28H8D.35DH8.27H8D.35DH8.27H8D.35DH8.27H8D.35DH8.27H8D.35DH8.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H6.35H6L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.27HL2H5D.35DH5L2H.28L2H4D.37DH4L2.29L2H4D.37DH4L2.29L2H4D.37DH4L2.29L2H4D.37DH4L2.30LH3D.39DH3L.31H4D.39DH4.31H4D.39DH4.32H2D.41DH2.3696","hbM":".433H15.61H23.55H27.51H31.48H33.45H37.42H39.40H41.38H43.36H45.35H45.34H47.32H49.31H49.31H49.30H51.29H51.29H51.29H51.29H51.29H51.29H51.29H51.29H51.29H51.29H51.30H49.31H49.31H49.32H47.34H45.35H45.36H43.38H41.40H39.42H37.45H33.48H31.51H27.55H23.61H15.5312","hfM":".195H11.58H24.55H26.54H29.51H31.50H32.47H35.44H37.42H10L4H11L4H10.40H7L4HLHLH11LHLHL4H7.38H4L4HLHLH9DH9LHLHL4H4.36H4LHLHLH12D.DH12LHLHLH4.34H5LH15D.3DH15LH5.32H22D.3DH22.31H19D3.5D3H19.30H18D2.11D2H18.29H17D.15DH17.29H16D.17DH16.28H17D.17DH17.27H16D.19DH16.27H11D5.21D5H11.27H10D.31DH10.27H9D.33DH9.28H8D.33DH8.29H7D.35DH7.29H7D.35DH7.29H7D.35DH7.29H6D.37DH6.29H6D.37DH6.29H5D.39DH5.29H5D.39DH5.29H4D.41DH4.29D5.41D5.6174","tee":".3871T2X.13XT2.60T4X.11XT4.52T.4T6X.11XT5U.4U.42T15X.9XT6U8T.38T17X3.3X3T7U8T2.36T21X3T10U8T3.35T34U8T3.35T34U8T3.35T34U8T3.35T34U8T3.36T33U8T2.38X3TX2T26U3V2UV2X.42X.2XT25U2V.2V.48XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51XT25U2V.51V29.2825","shorts":".5946w29.51vQ23q4w.51vQ23q4w.51vQ23q4w.51vQ23q4w.51vQ23q4w.51Q24q5.51Q24q5.51Q24q5.51Q24q5.51Q13.3Q8q5.51Q13.3Q8q5.51Q13.3Q8q5.51Q13.3Q8q5.51Q7v6.3v6Q2q5.1865","socks":".7713o6.3o6.65O6.3O6.65O6.3O6.65O6.3O6.65o6.3o6.912","shoes":".8033G4.7G4.63F6G2.3G2F6.60F10.F10.59F10.F10.60f8.3f8.63f4.7f4.512"};
 // ===== NHÂN VẬT TỰ CHỌN: giới tính, kiểu tóc, áo, quần, giày, mũ/nón, kính, râu =====
-// vẽ pixel 32×44 bằng các hình khối, tự đổ bóng theo màu và tự vẽ viền đen quanh dáng người
-const AV_W=32,AV_H=44;
-const AV_HAIR=['#2a2438','#5b3a1a','#8a5a2b','#ffd36a','#e8542f','#ff7eb6','#59b8ff','#8e5de6','#2fb344','#c9d3e0'];
-const AV_SKIN=['#ffe0c4','#ffd7b5','#e8b48a','#c68a5c','#a8714a'];
-const AV_COLOR=['#7b4bd6','#ef4b4b','#2fa8e0','#2fb344','#ffd23f','#ff7eb6','#f08a24','#3a3a4a','#f4f4f4','#1e3a8a'];
-const AV_BOTTOM=['#2f3a56','#1e3a8a','#5b3a1a','#3a3a4a','#c9d3e0','#2fb344','#ef4b4b','#f4e3c1','#ff7eb6'];
-const AV_SHOE=['#6b4423','#1d1a2f','#ef4b4b','#2fa8e0','#f4f4f4','#ffd23f','#ff7eb6','#2fb344'];
-const AV_HATC=['#ef4b4b','#2fa8e0','#2fb344','#ffd23f','#ff7eb6','#7b4bd6','#3a3a4a','#f4f4f4'];
+// nền là bộ nhân vật cô gửi (character_layers.zip: nữ, male_layers.zip: nam) — các lớp pixel 80×112 ghép chồng,
+// đổi màu da / tóc / mắt theo "vai trò màu"; kiểu tóc khác tạo từ tóc gốc; trang phục, phụ kiện vẽ bằng code bám dáng người gốc
+const AV_W=80,AV_H=116,AV_OY=4,AV_FEET=110; // hạ nhân vật 4 điểm để có chỗ cho tóc dựng, mũ; AV_FEET: hàng chân chạm đất
+const AV_HAIR=['#2b2230','#5b3a1a','#8a5a2b','#ffd36a','#e8542f','#ff7eb6','#59b8ff','#8e5de6','#2fb344','#c9d3e0'];
+const AV_SKIN=['#fde3cf','#fbd9c0','#e8b48a','#c68a5c','#a8714a'];
+const AV_EYE=['#6a5aa8','#8a5a3c','#1d1a2f','#3d5bd9','#2f9e5b','#c0392b','#6b7a8f'];
+const AV_COLOR=['#f4f4f8','#7b4bd6','#ef4b4b','#2fa8e0','#2fb344','#ffd23f','#ff7eb6','#f08a24','#3a3a4a','#2c3e6b'];
+const AV_BOTTOM=['#3a4a7a','#4a5060','#1e3a8a','#5b3a1a','#3a3a4a','#c9d3e0','#2fb344','#ef4b4b','#f4e3c1','#ff7eb6'];
+const AV_SHOE=['#f1f1f4','#6b4423','#1d1a2f','#ef4b4b','#2fa8e0','#ffd23f','#ff7eb6','#2fb344'];
+const AV_HATC=['#ef4b4b','#2fa8e0','#2fb344','#ffd23f','#ff7eb6','#7b4bd6','#3a3a4a','#f4f4f8'];
 // các lựa chọn (mã → tên hiện trên nút)
 const AV_OPT={
   gender:[['girl','NỮ'],['boy','NAM']],
   hairStyle:[['long','DÀI'],['bob','NGANG VAI'],['ponytail','ĐUÔI NGỰA'],['bun','BÚI'],['pigtails','BÍM 2 BÊN'],['curly','XOĂN'],
     ['short','NGẮN'],['sidepart','RẼ NGÔI'],['spiky','DỰNG'],['buzz','HÚI CUA'],['curlyshort','XOĂN NGẮN'],['quiff','VUỐT NGƯỢC']],
-  top:[['tee','ÁO THUN'],['blouse','ÁO CỔ SEN'],['polo','ÁO POLO'],['shirt','SƠ MI + CÀ VẠT'],['hoodie','HOODIE'],['sweater','ÁO LEN SỌC'],['jacket','ÁO KHOÁC'],['dress','VÁY LIỀN'],['uniform','ĐỒNG PHỤC']],
+  top:[['tee','ÁO THUN'],['blouse','ÁO CỔ SEN'],['polo','ÁO POLO'],['shirt','SƠ MI + CÀ VẠT'],['hoodie','HOODIE'],['sweater','ÁO LEN SỌC'],['jacket','ÁO KHOÁC'],
+    ['cardigan','CARDIGAN'],['suit','ÁO VEST'],['sailor','ÁO THỦY THỦ'],['overalls','QUẦN YẾM'],['dress','VÁY LIỀN'],['aodai','ÁO DÀI'],['uniform','ĐỒNG PHỤC']],
   bottom:[['pants','QUẦN DÀI'],['shorts','QUẦN SHORT'],['skirt','CHÂN VÁY']],
-  shoes:[['school','GIÀY DA'],['sneaker','THỂ THAO'],['boot','BỐT']],
-  hat:[['none','KHÔNG'],['beret','MŨ NỒI'],['cap','LƯỠI TRAI'],['beanie','MŨ LEN'],['crown','VƯƠNG MIỆN'],['bow','NƠ'],['headphones','TAI NGHE'],['conical','NÓN LÁ']],
+  shoes:[['sneaker','THỂ THAO'],['school','GIÀY DA'],['boot','BỐT']],
+  hat:[['none','KHÔNG'],['beret','MŨ NỒI'],['cap','LƯỠI TRAI'],['beanie','MŨ LEN'],['grad','MŨ TỐT NGHIỆP'],['crown','VƯƠNG MIỆN'],['bow','NƠ'],['flower','KẸP HOA'],['catears','TAI MÈO'],['headphones','TAI NGHE'],['conical','NÓN LÁ']],
   glasses:[['none','KHÔNG'],['regular','KÍNH THƯỜNG'],['round','KÍNH TRÒN'],['sun','KÍNH ĐEN']],
   beard:[['none','KHÔNG'],['mustache','RIA MÉP'],['full','QUAI NÓN']],
 };
 // mỗi giới tính chỉ hiện các lựa chọn hợp (món đầu danh sách là mặc định khi đổi giới tính)
 const AV_FOR={
-  girl:{hairStyle:['long','bob','ponytail','bun','pigtails','curly'],top:['dress','tee','blouse','hoodie','sweater','jacket','uniform'],bottom:['skirt','pants','shorts'],hat:['none','bow','beret','cap','beanie','crown','headphones','conical'],beard:['none']},
-  boy:{hairStyle:['short','sidepart','spiky','buzz','curlyshort','quiff'],top:['tee','polo','shirt','hoodie','sweater','jacket','uniform'],bottom:['pants','shorts'],hat:['none','cap','beanie','beret','crown','headphones','conical'],beard:['none','mustache','full']},
+  girl:{hairStyle:['long','bob','ponytail','bun','pigtails','curly'],top:['tee','dress','aodai','sailor','blouse','cardigan','hoodie','sweater','jacket','suit','overalls','uniform'],bottom:['shorts','skirt','pants'],
+    hat:['none','bow','flower','catears','beret','cap','beanie','grad','crown','headphones','conical'],beard:['none']},
+  boy:{hairStyle:['short','sidepart','spiky','buzz','curlyshort','quiff'],top:['tee','polo','shirt','hoodie','sweater','jacket','cardigan','suit','sailor','overalls','uniform'],bottom:['shorts','pants'],
+    hat:['none','cap','beanie','beret','grad','crown','headphones','conical'],beard:['none','mustache','full']},
 };
-const AV_DEFAULT={gender:'girl',hairStyle:'long',hair:'#ffd36a',skin:'#ffd7b5',top:'dress',color:'#7b4bd6',bottom:'skirt',bottomColor:'#2f3a56',shoes:'school',shoeColor:'#6b4423',hat:'none',hatColor:'#ef4b4b',glasses:'none',beard:'none'};
+// áo liền quần / váy: không chọn quần riêng
+const AV_ONEPIECE=['dress','aodai','overalls'];
+const AV_DEFAULT={gender:'girl',hairStyle:'long',hair:'#2b2230',skin:'#fbd9c0',top:'tee',color:'#f4f4f8',bottom:'shorts',bottomColor:'#3a4a7a',shoes:'sneaker',shoeColor:'#f1f1f4',hat:'none',hatColor:'#ef4b4b',glasses:'none',beard:'none',eyeColor:'#6a5aa8'};
 // nhân vật lưu theo kiểu cũ (outfit, glasses/hat/beard là đúng/sai) vẫn hiện đúng
 function avNorm(cfg){
   const v={...(cfg||{})};
@@ -763,144 +773,227 @@ function shade(hex,f){
   const n=parseInt(hex.slice(1),16);
   return '#'+[n>>16,n>>8&255,n&255].map(v=>Math.round(f<1?v*f:v+(255-v)*(f-1))).map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
 }
+// nhân từng kênh màu (giữ sắc ấm khi đổ bóng da)
+function tint(hex,[a,b,c]){const n=parseInt(hex.slice(1),16);return '#'+[(n>>16)*a,(n>>8&255)*b,(n&255)*c].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+const _avDec={};
+function avLayer(name){ // giải nén một lớp gốc → mảng 80×112 các ký tự vai trò (null = trống)
+  if(_avDec[name])return _avDec[name];
+  const a=new Array(80*112).fill(null);let i=0;
+  AV_LAYERS[name].replace(/([^0-9])(\d*)/g,(_,ch,n)=>{n=n?+n:1;for(let k=0;k<n;k++,i++)if(ch!=='.')a[i]=ch;return '';});
+  return _avDec[name]=a;
+}
 function avatarGrid(cfg){
   const c=avNorm(cfg),girl=c.gender==='girl',T=c.top,hs=c.hairStyle;
   const g=Array.from({length:AV_H},()=>Array(AV_W).fill(null));
-  const P=(x,y,col)=>{if(x>=0&&y>=0&&x<AV_W&&y<AV_H)g[y][x]=col;};
-  const R=(x,y,w,h,col)=>{for(let j=0;j<h;j++)for(let i=0;i<w;i++)P(x+i,y+j,col);};
-  const E=(cx,cy,rx,ry,col,keep)=>{for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
-    const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;if(dx*dx+dy*dy<=1&&(!keep||keep(x,y)))P(x,y,col);}};
-  const K='#1d1a2f',W='#f6f7fb',sk=c.skin,skD=shade(sk,.86),hr=c.hair,hrD=shade(hr,.72),hrL=shade(hr,1.35);
-  const white=T==='uniform'||T==='shirt';
-  const top=white?W:c.color,topD=white?'#c9d3e0':shade(c.color,.75),topL=white?'#ffffff':shade(c.color,1.25);
-  const dress=T==='dress',skirt=dress||c.bottom==='skirt';
-  const low=dress?c.color:T==='uniform'?'#1e3a8a':c.bottomColor,lowD=shade(low,.72);
-  const longSleeve=['hoodie','shirt','sweater','jacket'].includes(T);
+  // mọi tọa độ dưới đây là tọa độ của bộ hình gốc 80×112 (P tự cộng AV_OY khi vẽ)
+  const P=(x,y,col)=>{x=Math.round(x);y=Math.round(y)+AV_OY;if(x>=0&&y>=0&&x<AV_W&&y<AV_H)g[y][x]=col;};
+  const at=(x,y)=>{const r=g[y+AV_OY];return r?r[x]:undefined;};
+  const R=(x0,y0,x1,y1,col)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)P(x,y,col);};
+  const E=(cx,cy,rx,ry,col,cond)=>{for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+    const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1&&(!cond||cond(x,y)))P(x,y,col);}};
+  const L=(x0,y0,x1,y1,col,w=1)=>{const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n,y=y0+(y1-y0)*i/n;R(Math.round(x),Math.round(y),Math.round(x)+w-1,Math.round(y),col);}};
+  // trục giữa thân: 40.5 (điểm x đối xứng với 81-x)
+  const MR=(x0,y0,x1,y1,col)=>{R(x0,y0,x1,y1,col);R(81-x1,y0,81-x0,y1,col);};
+  const ME=(cx,cy,rx,ry,col,cond)=>{E(cx,cy,rx,ry,col,cond);E(81-cx,cy,rx,ry,col,cond);};
+  const stamp=(name,pal,keep)=>{const a=avLayer(name);for(let i=0;i<a.length;i++){const r=a[i];if(!r)continue;const x=i%80,y=(i/80)|0;if(keep&&!keep(x,y))continue;if(pal[r])P(x,y,pal[r]);}};
+  const K='#17111d',W='#ffffff',SH='rgba(23,17,29,0.14)';
+  const sk=c.skin,SK={S:sk,s:tint(sk,[.95,.83,.77]),t:tint(sk,[.97,.91,.875])};
+  const hr=c.hair,hrD=shade(hr,.5),hrL=shade(hr,1.25),HP={H:hr,D:hrD,L:hrL};
+  const red='#e53935',redD='#b71c1c',yel='#ffd23f',yelD='#d9a400';
+  const white=['uniform','shirt','sailor'].includes(T);
+  const top=white?'#f4f4f8':c.color,tU=shade(top,.9),tV=shade(top,.62),tX=shade(top,.72),tL=shade(top,1.22);
+  const TP={T:top,U:tU,V:tV,X:tX};
+  const onePiece=AV_ONEPIECE.includes(T),dress=T==='dress',skirt=dress||(!onePiece&&c.bottom==='skirt');
+  const low=dress?c.color:T==='uniform'?'#1e3a8a':c.bottomColor,lowQ=shade(low,.78),lowW=shade(low,.6),lowV=shade(low,.74),lowL=shade(low,1.2);
+  const LP={Q:low,q:lowQ,w:lowW,v:lowV};
+  const longSleeve=['hoodie','shirt','sweater','jacket','suit','cardigan','aodai'].includes(T);
+  const hatOn=!['none','bow','flower'].includes(c.hat);
+  // chân váy xòe có nếp (váy liền: phần dưới bắt đầu từ thắt lưng)
+  const skirtAt=y0=>{
+    for(let y=y0;y<=90;y++){const k=Math.floor((y-y0)*.42);R(26-k,y,55+k,y,y>=89?lowW:low);}
+    for(let y=y0+2;y<=88;y++){const k=(y-y0)*.42;for(const f of [-.55,-.2,.2,.55])P(40.5+f*(29+2*k),y,lowQ);}
+    R(26,y0,55,y0+1,dress?tX:lowQ);
+  };
 
-  // tóc phía sau đầu
-  if(hs==='long'){E(16,14,11.5,10.5,hrD);R(5,14,6,16,hrD);R(21,14,6,16,hrD);E(8,30,3,2,hrD);E(24,30,3,2,hrD);}
-  if(hs==='bob'){E(16,14,11.5,10.5,hrD,(x,y)=>y<=24);R(5,14,6,11,hrD);R(21,14,6,11,hrD);}
-  if(hs==='curly'){E(16,13,13,11,hrD);for(const [x,y] of [[4,20],[28,20],[5,24],[27,24],[7,27],[25,27]])E(x,y,2.6,2.6,hrD);}
-  if(hs==='ponytail'){E(26.5,17,2.8,7,hrD);E(27,24,2,3,hrD);R(25,10,3,2,shade(c.hatColor,.9));}
-  if(hs==='pigtails'){E(4.5,19,2.6,5.5,hrD);E(27.5,19,2.6,5.5,hrD);R(5,13,2,2,'#ff7eb6');R(25,13,2,2,'#ff7eb6');}
-  // cổ, tay
-  R(14,23,4,4,skD);
-  R(7,31,3,4,sk);R(22,31,3,4,sk);P(7,34,skD);P(24,34,skD);
-  // áo
-  E(16,28.5,8.5,3.5,top);R(10,27,12,9,top);
-  const sl=longSleeve?7:dress?3:5;R(7,27,4,sl,top);R(21,27,4,sl,top);
-  if(longSleeve){R(7,33,4,1,topD);R(21,33,4,1,topD);}           // cổ tay áo
-  for(let y=28;y<27+Math.min(sl,5);y++){P(10,y,topD);P(21,y,topD);} // đường may tay áo
-  R(19,29,2,7,topD);R(11,28,2,3,topL);                          // bóng và chỗ sáng
-  if(T==='uniform'){ // áo trắng, khăn quàng đỏ, cúc áo
-    P(13,26,topD);P(18,26,topD);
-    R(13,26,6,1,'#e53935');R(14,27,4,1,'#e53935');R(15,28,2,1,'#c62828');P(15,29,'#e53935');P(16,30,'#c62828');
-    P(16,32,'#9aa3b5');P(16,34,'#9aa3b5');
-  }else if(T==='tee')R(14,26,4,1,topD);
-  else if(T==='blouse'){E(13.4,27,2.6,1.6,W);E(18.6,27,2.6,1.6,W);R(15,27,2,1,'#ef4b4b');P(14,28,'#ef4b4b');P(17,28,'#ef4b4b');}
-  else if(T==='polo'){R(12,26,3,2,topL);R(17,26,3,2,topL);R(15,27,2,4,topD);P(15,28,W);P(15,30,W);}
-  else if(T==='hoodie'){R(11,25,10,2,topD);R(12,32,8,3,topD);R(13,32,6,1,shade(c.color,.62));for(const x of [14,17])R(x,27,1,3,W);}
-  else if(T==='shirt'){P(13,26,'#c9d3e0');P(18,26,'#c9d3e0');P(14,27,'#c9d3e0');P(17,27,'#c9d3e0');R(15,27,2,1,shade(c.color,.8));R(15,28,2,5,c.color);P(15,33,c.color);P(16,33,shade(c.color,.8));}
-  else if(T==='sweater'){const st=c.color==='#f4f4f4'?'#ef4b4b':'#f4f4f4';for(const y of [29,32])R(7,y,18,1,st);R(13,26,6,1,topD);}
-  else if(T==='jacket'){R(14,27,4,9,W);R(13,27,1,9,topD);R(18,27,1,9,topD);P(15,26,'#c9d3e0');P(16,26,'#c9d3e0');R(11,31,2,1,topD);R(19,31,2,1,shade(c.color,.62));}
-  // phần dưới: váy, quần dài, quần short
-  if(skirt){
-    const y0=dress?34:35;
-    for(let r=0;r<40-y0;r++)R(10-Math.ceil(r*.6),y0+r,12+2*Math.ceil(r*.6),1,r===39-y0?lowD:low);
-    for(let r=1;r<39-y0;r++){P(13,y0+r,lowD);P(18,y0+r,lowD);} // nếp váy
-    if(dress)R(10,33,12,1,topD);                               // thắt lưng váy
-    R(12,40,3,1,sk);R(17,40,3,1,sk);
-  }else if(c.bottom==='shorts'){
-    R(11,36,10,2,low);R(11,38,4,1,low);R(17,38,4,1,low);R(20,36,1,3,lowD);
-    R(12,39,3,2,sk);R(17,39,3,2,sk);P(14,39,skD);P(19,39,skD);
+  // ================= bóng dưới chân, tóc phía sau =================
+  stamp('shadow',{z:SH});
+  const shortGirl=['ponytail','pigtails','bun'].includes(hs);
+  if(girl){
+    stamp('hbF',{H:hr},(x,y)=>hs==='bob'?y<=50:shortGirl?y<=44:true);
+    if(hs==='curly'){for(const y of [22,32,42,52,61])for(const x of [12.5,68.5])E(x,y,4.5,5.5,hr);for(const x of [22,31,40.5,50,59])E(x,67,5,3.5,hr);}
+    if(hs==='ponytail'){E(69,34,5.5,12,hr);E(71,50,4.2,9,hr);L(68,26,71,57,hrD);}
+    if(hs==='pigtails'){ME(9,40,5.5,12.5,hr);ME(10,56,4,6,hr);L(9,30,10,60,hrD);L(72,30,71,60,hrD);}
+  }else stamp('hbM',{H:hr});
+
+  // ================= người: thân (da), tất, giày =================
+  stamp('body',SK);
+  if(c.shoes!=='boot'&&T!=='aodai')stamp('socks',{O:W,o:'#b7b7b7'});
+  const sh=c.shoeColor,shD=shade(sh,.7),shL=shade(sh,1.3);
+  const shoe=()=>{
+    if(c.shoes==='sneaker')stamp('shoes',{F:sh,f:'#e9ebf0',G:shade(sh,.72)});
+    else{stamp('shoes',{F:sh,f:shD,G:shade(sh,.55)});MR(33,101,36,101,shD);P(34,102,shL);P(47,102,shL);}
+  };
+  if(c.shoes==='boot'){MR(32,90,38,101,sh);MR(32,90,38,91,shD);MR(34,93,35,98,shL);}
+
+  // ================= quần / váy =================
+  if(T==='aodai'){ // quần lụa trắng ống suông
+    stamp('shorts',{Q:'#f6f7fb',q:'#e3e6ee',w:'#cfd4de',v:'#dfe3ea'});
+    for(let y=89;y<=99;y++){const k=(y-88)*.45;R(Math.round(26+k),y,38,y,'#f6f7fb');R(42,y,Math.round(55-k),y,'#f6f7fb');P(38,y,'#e3e6ee');P(Math.round(55-k),y,'#e3e6ee');}
+  }else if(skirt){
+    if(!dress)skirtAt(77);
   }else{
-    R(11,36,10,2,low);R(11,38,4,3,low);R(17,38,4,3,low);
-    R(14,38,1,3,lowD);R(20,36,1,5,lowD);
-  }
-  // giày
-  const sh=c.shoeColor,shD=shade(sh,.68),shL=shade(sh,1.35);
-  if(c.shoes==='boot'){R(11,38,4,5,sh);R(17,38,4,5,sh);R(10,41,5,2,sh);R(17,41,5,2,sh);R(10,42,5,1,shD);R(17,42,5,1,shD);R(11,38,4,1,shD);R(17,38,4,1,shD);P(12,39,shL);P(18,39,shL);}
-  else if(c.shoes==='sneaker'){R(10,41,5,1,sh);R(17,41,5,1,sh);R(10,42,5,1,W);R(17,42,5,1,W);P(12,41,W);P(19,41,W);P(10,41,shL);P(17,41,shL);}
-  else{R(10,41,5,2,sh);R(17,41,5,2,sh);R(10,42,5,1,shD);R(17,42,5,1,shD);P(11,41,shL);P(18,41,shL);}
-
-  // đầu: tai, mặt
-  E(7,16,1.6,2.2,skD);E(25,16,1.6,2.2,skD);
-  if(girl)E(16,14.5,9,9.5,sk);else{E(16,14.5,9.6,9,sk);E(16,17.5,9.4,6.5,sk);} // mặt nam tròn hơn, cằm không nhọn
-  R(9,12,15,1,skD); // bóng tóc mái trên trán
-  // tóc phía trước
-  const fringe=(step,rows)=>{for(let x=9;x<=22;x++)if(x%step!==1)P(x,12,hr);if(rows>1)for(let x=9;x<=22;x++)if(x%step===3)P(x,13,hr);};
-  if(hs==='bob'){ // ngang vai, mái bằng
-    E(16,11,10.5,8,hr,(x,y)=>y<=11);R(6,11,3,13,hr);R(23,11,3,13,hr);R(8,11,1,12,hrD);R(23,11,1,12,hrD);R(9,11,14,2,hr);R(9,12,14,1,hrD);
-  }else if(hs==='sidepart'){ // rẽ ngôi, mái hất sang một bên
-    E(16,11,10,7.5,hr,(x,y)=>y<=10);R(7,10,2,6,hr);R(23,10,2,6,hr);
-    for(let x=9;x<=22;x++){const n=x<13?3:x<17?2:x<20?1:0;if(n)R(x,11,1,n,hr);}
-    for(const [x,y] of [[12,5],[12,6],[12,7],[11,8],[11,9]])P(x,y,hrD);
-  }else if(hs==='buzz'){ // húi cua: tóc rất ngắn sát đầu
-    E(16,12,9.6,7.4,hr,(x,y)=>y<=9);R(7,10,2,3,hr);R(23,10,2,3,hr);
-    for(let y=5;y<=9;y++)for(let x=8;x<=24;x+=3)if(g[y][x]===hr)P(x+(y%2),y,hrD);
-  }else if(hs==='curlyshort'){ // xoăn ngắn
-    E(16,11,10,7.5,hr,(x,y)=>y<=10);R(7,10,2,5,hr);R(23,10,2,5,hr);
-    for(const [x,y] of [[9,6],[12.5,4.3],[16,3.8],[19.5,4.3],[23,6],[7.5,10],[24.5,10]])E(x,y,2.3,2.1,hr);
-    for(let x=9;x<=22;x+=2)P(x,11,hr);for(const [x,y] of [[11,6],[15,5],[19,6]])P(x,y,hrD);
-  }else if(hs==='quiff'){ // vuốt ngược, hai bên cạo ngắn
-    E(16,10.5,9.4,6.6,hr,(x,y)=>y<=9);R(7,9,2,5,hrD);R(23,9,2,5,hrD);E(14.5,5.2,7,3.4,hr);E(13,4.6,4,2,hrL);
-  }else if(hs==='long'||hs==='curly'){
-    E(16,11,10.5,8,hr,(x,y)=>y<=11);
-    R(6,11,3,13,hr);R(23,11,3,13,hr);R(8,11,1,12,hrD);R(23,11,1,12,hrD);fringe(4,2);
-    if(hs==='curly')for(const [x,y] of [[8,6],[12,4],[16,3],[20,4],[24,6]])E(x,y,2.2,2,hr);
-  }else if(hs==='short'||hs==='spiky'){
-    E(16,11,10,7.5,hr,(x,y)=>y<=10);
-    R(7,10,2,6,hr);R(23,10,2,6,hr);
-    for(let x=9;x<=22;x++)if(x%3!==0)P(x,11,hr);
-    for(let x=10;x<=21;x+=3)P(x,12,hr);
-    if(hs==='spiky')for(const x0 of [8,12,16,20])for(let r=0;r<4;r++)R(x0+r/2|0,4-r,4-r,1,hr);
-  }else{ // đuôi ngựa, búi, bím: tóc gọn ôm đầu, có mái
-    E(16,11,10.3,7.8,hr,(x,y)=>y<=11);R(7,11,2,7,hr);R(23,11,2,7,hr);fringe(4,2);
-  }
-  for(let x=10;x<=15;x++)P(x,x<12?7:6,hrL);P(16,6,hrL);P(9,8,hrL); // chỗ sáng trên tóc
-  if(hs==='bun'){E(16,1.9,4.4,2.6,hr);R(12,3,9,1,hrD);R(13,4,6,1,'#ff7eb6');P(14,1,hrL);P(15,0,hrL);} // búi tóc trên đỉnh đầu
-  // mặt: lông mày, mắt có ánh sáng, má hồng, mũi, miệng cười
-  R(10,14,3,1,hrD);R(19,14,3,1,hrD);
-  for(const ex of [11,19]){R(ex,15,2,3,K);P(ex,16,'#ffffff');}
-  if(girl){P(10,15,K);P(21,15,K);}
-  R(9,18,2,1,'#ff9eb0');R(21,18,2,1,'#ff9eb0');
-  P(16,18,skD);
-  P(14,19,'#a33a4a');R(15,20,2,1,'#a33a4a');P(17,19,'#a33a4a');
-
-  // râu
-  if(c.beard==='full'){
-    E(16,19.5,8,5,hr,(x,y)=>y>=20&&g[y][x]!==null);
-    R(13,19,6,1,hr);R(14,18,1,1,hr);R(17,18,1,1,hr);
-    R(15,21,2,1,'#7a2a35');for(let x=10;x<=22;x+=3)P(x,23,hrD);
-  }else if(c.beard==='mustache'){R(13,19,6,1,hr);P(12,20,hr);P(19,20,hr);P(14,18,hrD);P(17,18,hrD);}
-  // kính
-  if(c.glasses!=='none'){
-    const sun=c.glasses==='sun',fr=sun?K:'#2b2b3b',lens=sun?'#22223a':'#bde8ff',round=c.glasses==='round';
-    for(const x0 of [9,18]){
-      for(let y=14;y<=18;y++)for(let x=x0;x<x0+5;x++){
-        const corner=round&&(y===14||y===18)&&(x===x0||x===x0+4);
-        if(corner)continue;
-        const edge=y===14||y===18||x===x0||x===x0+4;
-        if(edge)P(x,y,fr);else if(sun||g[y][x]===sk||g[y][x]===skD||g[y][x]===hrD||g[y][x]==='#ff9eb0')P(x,y,lens);
-      }
-      if(sun)P(x0+1,15,'#6a6a90');
+    stamp('shorts',LP);
+    if(c.bottom==='pants'||T==='overalls')for(let y=89;y<=98;y++){
+      const k=(y-88)*.6;R(Math.round(26+k),y,38,y,low);R(42,y,Math.round(55-k),y,low);
+      R(36,y,38,y,lowQ);R(Math.round(53-k),y,Math.round(55-k),y,lowQ);if(y===98){R(Math.round(26+k),y,38,y,lowW);R(42,y,Math.round(55-k),y,lowW);}
     }
-    R(14,15,4,1,fr);P(8,15,fr);P(23,15,fr);
   }
-  // mũ / nón
-  const t=c.hatColor,tD=shade(t,.75),tL=shade(t,1.3);
-  if(c.hat==='beret'){E(16,9,10.5,6.5,t,(x,y)=>y<=9);R(6,9,20,1,tD);R(5,10,22,2,tD);R(5,11,22,1,shade(t,.6));P(16,2,tL);P(16,3,tL);for(let x=10;x<=13;x++)P(x,5,tL);}
-  else if(c.hat==='cap'){E(16,9.5,9.8,6,t,(x,y)=>y<=9);R(7,9,18,2,tD);R(2,10,9,2,t);R(2,11,9,1,tD);P(16,3,tL);for(let x=11;x<=14;x++)P(x,5,tL);}
-  else if(c.hat==='beanie'){E(16,9,10.3,7,t,(x,y)=>y<=9);R(6,9,20,3,tD);for(let x=7;x<=25;x+=2)R(x,9,1,3,shade(t,.62));E(16,1.8,2.4,2,'#f6f7fb');for(let x=10;x<=13;x++)P(x,4,tL);}
-  else if(c.hat==='crown'){const Y='#ffd23f',YD='#d9a400';R(9,5,14,4,Y);R(9,8,14,1,YD);for(const x of [9,13,18,22])R(x,2,1,3,Y);for(const x of [10,14,17,21])R(x,3,1,2,Y);P(9,1,Y);P(22,1,Y);P(15,2,Y);P(16,2,Y);P(15,1,Y);P(16,1,Y);P(12,6,'#ef4b4b');P(16,6,'#2fa8e0');P(20,6,'#2fb344');}
-  else if(c.hat==='bow'){E(21.5,5.5,3,2.4,t);E(27,5.5,3,2.4,t);R(23,4,3,3,tD);P(21,5,tL);P(27,5,tL);}
-  else if(c.hat==='headphones'){for(let y=1;y<=9;y++)for(let x=3;x<=28;x++){const dx=(x+.5-16)/12.5,dy=(y+.5-11)/10,d=dx*dx+dy*dy;if(d<=1&&d>=.72)P(x,y,'#3a3a4a');}R(3,12,4,8,t);R(25,12,4,8,t);R(3,12,1,8,tD);R(28,12,1,8,tD);P(4,13,tL);P(26,13,tL);}
-  else if(c.hat==='conical'){const L='#e8cf8a',LD='#c9a95e';for(let r=0;r<9;r++){const w=Math.round(2+r*3.2);R(16-w/2|0,1+r,w,1,r%3===2?LD:L);}R(1,10,30,1,L);R(0,11,32,1,LD);}
+  if(c.shoes==='boot'){MR(32,92,38,100,sh);MR(32,92,38,93,shD);MR(34,94,35,98,shL);}
+  shoe();
 
-  // viền đen quanh dáng người
-  const out=g.map(r=>r.slice());
-  for(let y=0;y<AV_H;y++)for(let x=0;x<AV_W;x++)if(!g[y][x]&&[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>g[y+dy]&&g[y+dy][x+dx]))out[y][x]=K;
-  return out;
+  // ================= áo =================
+  stamp('tee',TP);                                   // thân áo + tay ngắn theo dáng áo gốc
+  if(longSleeve){ // tay dài tới cổ tay, có cổ tay áo
+    R(19,59,25,75,top);R(56,59,62,75,top);R(24,59,25,75,tU);R(56,59,56,75,tV);R(19,74,25,75,tX);R(56,74,62,75,tX);
+  }
+  if(T==='uniform'){ // áo trắng, khăn quàng đỏ, cúc áo
+    R(33,48,47,50,red);E(40.5,52.5,3.2,2.4,redD);L(39,54,35,63,red,2);L(42,54,46,63,red,2);L(38,54,35,60,redD);
+    for(const y of [57,62,67,72])R(40,y,41,y,'#9aa3b5');
+  }else if(T==='shirt'){ // sơ mi trắng + cà vạt theo màu đã chọn
+    const t=c.color,tD=shade(t,.7);
+    for(let i=0;i<4;i++){R(33+i,48+i,36,48+i,'#dfe3ec');R(45,48+i,48-i,48+i,'#dfe3ec');}
+    R(39,50,42,52,tD);for(let y=53;y<=68;y++){const w=y<66?2:y===66?1:0;R(40-w,y,41+w,y,t);P(41+w,y,tD);}
+    for(const y of [56,60,64])R(39,y,42,y,tD);
+  }else if(T==='blouse'){ // cổ sen trắng, nơ đỏ
+    E(35.5,51,5,3,W,(x,y)=>y>=49);E(45.5,51,5,3,W,(x,y)=>y>=49);E(35.5,51,5,3,'#dfe3ec',(x,y)=>y>=53);E(45.5,51,5,3,'#dfe3ec',(x,y)=>y>=53);
+    E(38.5,53,2.4,1.8,red);E(42.5,53,2.4,1.8,red);R(40,52,41,54,redD);L(39,55,38,58,red);L(42,55,43,58,red);
+  }else if(T==='polo'){ // cổ bẻ, nẹp 2 cúc
+    for(let i=0;i<4;i++){R(33+i,48+i,38,48+i,tL);R(43,48+i,48-i,48+i,tL);}R(39,49,42,58,tX);R(40,52,41,52,W);R(40,56,41,56,W);
+  }else if(T==='hoodie'){ // mũ trùm sau cổ, túi trước, dây rút
+    E(40.5,48.5,10,3.5,tX,(x,y)=>y>=47);R(31,63,50,72,tU);R(31,63,50,63,tX);L(31,64,33,72,tX);L(50,64,48,72,tX);
+    for(const x of [37,44]){R(x,51,x,58,W);P(x,59,'#c9d3e0');}R(26,73,55,76,tU);
+  }else if(T==='sweater'){ // áo len sọc ngang, bo cổ và gấu áo
+    const st=top==='#f4f4f8'?'#ef4b4b':'#f4f4f8';
+    for(const y of [57,64]){R(19,y,62,y+1,st);}R(26,72,55,76,tU);for(let x=27;x<=54;x+=2)R(x,72,x,76,tX);E(40.5,48,6,2.4,tU,(x,y)=>y>=48);
+  }else if(T==='jacket'){ // áo khoác khóa kéo mở, áo thun trắng bên trong
+    R(36,48,45,75,'#f4f4f8');R(41,51,42,75,'#e3e6ee');R(35,49,35,76,tX);R(46,49,46,76,tX);
+    for(let y=50;y<=74;y+=2){P(35,y,'#c9d3e0');P(46,y,'#c9d3e0');}
+    R(28,65,32,65,tV);R(49,65,53,65,tV);R(26,73,55,76,tU);E(35,48.5,3,2,tL);E(46,48.5,3,2,tL);
+  }else if(T==='cardigan'){ // áo len mỏng cổ V, áo trắng bên trong
+    for(let y=48;y<=76;y++){const w=y<62?Math.max(2,Math.round(7-(y-48)*.36)):0;if(w)R(41-w,y,40+w,y,'#f4f4f8');}
+    L(34,48,38,61,tX);L(47,48,43,61,tX);R(40,62,41,76,tX);for(const y of [64,68,72])R(38,y,39,y,tV);
+    R(26,73,55,76,tU);for(let x=27;x<=54;x+=2)R(x,73,x,76,tX);
+  }else if(T==='suit'){ // áo vest như giám thị: sơ mi trắng cổ V, ve áo sáng; nam có cà vạt
+    for(let y=48;y<=63;y++){const w=Math.max(0,Math.round(6-(y-48)*.4));if(w){R(41-w,y,40+w,y,'#f4f4f8');P(40-w,y,tL);P(41+w,y,tL);}}
+    if(!girl){R(40,50,41,51,redD);for(let y=52;y<=61;y++)R(40,y,41,y,red);}
+    R(28,62,32,62,tV);R(49,66,53,66,tV);R(29,56,32,58,W);P(30,57,'#2fa8e0');for(const y of [66,71])R(40,y,41,y,K);
+  }else if(T==='sailor'){ // cổ thủy thủ cùng màu váy / quần, viền trắng, nơ đỏ
+    for(let y=48;y<=58;y++){const k=Math.round((y-48)*.95);R(27,y,Math.max(27,39-k),y,low);R(Math.min(54,42+k),y,54,y,low);}
+    R(27,58,31,58,low);R(50,58,54,58,low);L(29,50,38-1,57,W);L(52,50,43+1,57,W);
+    E(37.5,59.5,3,2,red);E(43.5,59.5,3,2,red);R(40,58,41,61,redD);L(39,62,37,67,red,2);L(42,62,44,67,red,2);
+  }else if(T==='overalls'){ // áo thun màu đã chọn + yếm theo màu quần
+    R(31,60,50,76,low);R(31,60,50,60,lowQ);R(31,48,33,60,low);R(48,48,50,60,low);
+    R(36,64,45,69,lowQ);R(37,65,44,68,low);E(32,59,1.4,1.4,yel);E(49,59,1.4,1.4,yel);
+  }else if(T==='dress'){ // váy liền: cổ tròn trắng, thắt lưng nơ
+    skirtAt(67);E(40.5,48.5,6.5,2.6,W,(x,y)=>y>=48);R(26,66,55,67,tX);E(38,66.5,2.4,1.6,tL);E(43,66.5,2.4,1.6,tL);R(40,66,41,67,tV);
+  }else if(T==='aodai'){ // áo dài: cổ đứng, đường cài chéo, hoa văn, hai tà dài
+    R(35,43,46,48,tX);R(36,44,45,47,top);
+    L(45,49,55,56,tX);for(const [x,y] of [[48,51],[51,53],[54,55]])P(x,y,yel);
+    for(const [x,y] of [[30,56],[35,62],[29,67],[47,64],[44,71],[33,72]]){P(x,y,tL);P(x+1,y,W);P(x-1,y,W);P(x,y-1,W);P(x,y+1,W);}
+    for(let y=76;y<=101;y++){const w=Math.round(10-(y-76)*.12);R(41-w,y,40+w,y,top);P(41-w,y,tL);P(40+w,y,tX);}
+  }
+
+  // ================= đầu, mắt, má, miệng =================
+  stamp(girl?'headF':'headM',SK);
+  if(!girl&&(hs==='buzz'||hs==='quiff'))for(let y=10;y<=26;y++)for(let x=24;x<=57;x++)if(at(x,y)===SK.t)P(x,y,SK.S); // trán lộ ra: bỏ vệt bóng vốn nằm dưới mái
+  stamp(girl?'eyesF':'eyesM',{K,W,A:shade(c.eyeColor,.55),B:c.eyeColor,D:hrD});
+  stamp(girl?'faceF':'faceM',{p:girl?'#f6a3a3':'#f3b3a6',n:'#e98a7f'});
+  // râu (vẽ trước miệng để miệng nổi trên râu)
+  if(c.beard==='full')E(40.5,41,14,7.5,hr,(x,y)=>y>=39&&(at(x,y)===SK.S||at(x,y)===SK.s||at(x,y)===SK.t||at(x,y)==='#f3b3a6'));
+  if(c.beard!=='none'){R(35,38,46,39,hr);P(34,39,hr);P(47,39,hr);R(36,37,45,37,hrD);}
+  stamp('mouth',{m:'#c4565f'});
+  // kính (vẽ trước tóc mái để gọng luồn dưới tóc)
+  if(c.glasses!=='none'){
+    const sun=c.glasses==='sun',fr=sun?K:'#2b2b3b',lens=sun?'#22223a':'#cfeeff',round=c.glasses==='round';
+    for(const cx of [29,51]){
+      for(let y=24;y<=39;y++)for(let x=cx-7;x<=cx+7;x++){
+        const dx=(x-cx)/7,dy=(y-31.5)/7.5,d=round?dx*dx+dy*dy:Math.max(Math.abs(dx),Math.abs(dy));
+        if(d>1)continue;
+        const edge=round?d>=.76:(Math.abs(x-cx)>=7||y===24||y===39);
+        const v=at(x,y);if(edge)P(x,y,fr);else if(sun||v===SK.S||v===SK.s||v===SK.t||v==='#f6a3a3'||v==='#f3b3a6')P(x,y,lens);
+      }
+      if(sun){L(cx-4,27,cx-2,25,'#6a6a90');L(cx-5,29,cx-3,27,'#6a6a90');}
+    }
+    R(37,30,43,30,fr);R(17,30,21,30,fr);R(59,30,63,30,fr);
+  }
+
+  // ================= tóc phía trước =================
+  if(girl){
+    stamp('hfF',HP,(x,y)=>hs==='bob'?y<=50:shortGirl?(y<=40||(x>22&&x<58)):true);
+    if(hs==='bob'){E(17.5,50,4.5,2.6,hr);E(63.5,50,4.5,2.6,hr);L(15,49,20,51,hrD);L(66,49,61,51,hrD);}
+    if(shortGirl){E(17.5,40,4.2,2.6,hr);E(63.5,40,4.2,2.6,hr);}
+    if(hs==='ponytail')R(63,22,67,27,'#ff7eb6');
+    if(hs==='pigtails'){ME(12,29,3.4,2.6,'#ff7eb6');}
+    if(hs==='bun'){E(40.5,-1,8.5,5.5,hr);L(35,-3,46,1,hrD);R(33,3,48,4,'#ff7eb6');P(38,-4,hrL);P(39,-5,hrL);}
+  }else{
+    const keep=hs==='buzz'?(x,y)=>!(y>11&&Math.abs(x-40.5)<17):hs==='quiff'?(x,y)=>!(y>9&&Math.abs(x-40.5)<15):null;
+    stamp('hfM',HP,keep);
+    if(hs==='buzz')for(let y=2;y<=34;y+=2)for(let x=12+(y%4?2:0);x<=68;x+=4)if(at(x,y)===hr)P(x,y,hrD);
+    if(hs==='sidepart'){E(27,3,11,4.5,hr);L(31,1,33,12,hrD);L(37,3,57,13,hrD);L(41,2,61,10,hrD);L(22,2,29,1,hrL);}
+    const isHr=v=>v===hr||v===hrD||v===hrL;
+    const topY=x=>{for(let y=-4;y<60;y++)if(isHr(at(x,y)))return y;return 99;}; // hàng tóc cao nhất ở cột x
+    if(hs==='spiky'){ // dựng: các chỏm tóc to, chân chồng lên nhau, ngả dần ra hai bên, có mặt tối + vệt sáng
+      const tufts=hatOn?[]:[[19,-.9],[27,-.5],[35,-.15],[43,.2],[51,.55],[59,.9]]; // cả khối hơi hất sang phải
+      for(const [x0,lean] of tufts){
+        const ty=topY(Math.round(x0));if(ty>30)continue;
+        const base=ty+5,h=11-Math.abs(lean)*3,apx=x0+lean*7,apy=base-h-3;
+        for(let y=Math.ceil(apy);y<=base;y++){const f=(y-apy)/(base-apy),cx=apx+(x0-apx)*f,w=6.5*f;
+          R(Math.round(cx-w),y,Math.round(cx+w),y,hr);if(f>.25)P(cx+w*.55*(lean>=0?1:-1),y,hrD);if(f>.2&&f<.7)P(cx-w*.35*(lean>=0?1:-1),y,hrL);}
+      }
+    }
+    if(hs==='curlyshort'){ // xoăn ngắn: lọn tròn bám quanh viền đầu + hoa văn lọn xoăn khắp tóc + vài lọn rủ trán
+      for(let a=192;a<=348;a+=13){const r=a*Math.PI/180,x=40.5+27.5*Math.cos(r),y=21+21*Math.sin(r);if(hatOn&&y<11)continue;E(x,y,4.4,4,hr);}
+      for(const x of [26,33,40.5,48,55])E(x,13.5,3.4,2.8,hr);
+      for(let y=0;y<=34;y+=5)for(let x=13+((y/5)%2?3:0);x<=68;x+=6)if(isHr(at(x,y))&&isHr(at(x+2,y))&&isHr(at(x,y-2))){
+        P(x-1,y,hrD);P(x,y-1,hrD);P(x+1,y-1,hrD);P(x+2,y,hrD);P(x+1,y+1,hrD);P(x,y-2,hrL);}
+    }
+    if(hs==='quiff'){E(39,5,13.5,7,hr);E(46,1,9,5,hr);for(const x of [30,35,40,45])L(x,12,x+5,-1,hrD);for(let x=33;x<=47;x++)P(x,Math.round(-1+Math.pow(x-40,2)/18),hrL);}
+  }
+
+  // ================= mũ / nón / phụ kiện =================
+  const t=c.hatColor,tD=shade(t,.75),tLL=shade(t,1.3);
+  if(c.hat==='beret'){E(44,6,27,9,t,(x,y)=>y<=10);R(14,9,67,12,tD);R(14,12,67,12,shade(t,.6));R(43,-4,45,-2,tD);for(let x=24;x<=38;x++)P(x,Math.round(1+Math.pow(x-31,2)/30),tLL);}
+  else if(c.hat==='cap'){E(40.5,12,26,13.5,t,(x,y)=>y<=10);R(14,9,67,12,tD);E(15,12,15,3.4,t,(x,y)=>x<=28);R(1,13,28,13,tD);R(40,-2,41,-1,tD);L(40.5,-1,40.5,9,tD);for(let x=26;x<=36;x++)P(x,2,tLL);}
+  else if(c.hat==='beanie'){E(40.5,13,27.5,16,t,(x,y)=>y<=9);R(13,8,68,15,tD);for(let x=14;x<=67;x+=2)R(x,8,x,15,shade(t,.62));E(40.5,-4,5,4.2,W);E(39,-5,1.8,1.4,'#e3e7ee');for(let x=26;x<=34;x++)P(x,-1,tLL);}
+  else if(c.hat==='grad'){ // mũ tốt nghiệp: đỉnh vuông dẹt, chỏm, tua vàng
+    const B='#2b2b3b',BL='#45455c';R(22,0,59,9,B);R(22,8,59,9,'#1d1d2b');
+    for(let y=-5;y<=2;y++){const w=Math.round(27-Math.abs(y+1.5)*6);R(40-w,y,41+w,y,y<-1?BL:B);}
+    E(40.5,-1.5,1.8,1.2,yel);R(42,-2,62,-2,yel);R(62,-2,62,12,yel);E(62,14,2,2.8,yelD);
+  }else if(c.hat==='crown'){
+    R(26,3,55,9,yel);R(26,8,55,9,yelD);
+    for(const [x,h] of [[26.5,7],[33,5],[40.5,9],[48,5],[54.5,7]])for(let r=0;r<h;r++){const w=r*.45;R(Math.round(x-w),3-h+r,Math.round(x+w),3-h+r,yel);}
+    E(33,6,1.8,1.6,'#ef4b4b');E(40.5,6,2,1.8,'#2fa8e0');E(48,6,1.8,1.6,'#2fb344');
+  }else if(c.hat==='bow'){E(55,4,7,5,t);E(69,4,7,5,t);E(62,4,3,3.4,tD);E(53,2,2.6,1.6,tLL);E(67,2,2.6,1.6,tLL);L(58,4,61,4,tD);L(63,4,66,4,tD);}
+  else if(c.hat==='flower'){for(const [dx,dy] of [[0,-4.5],[4.3,-1.4],[2.7,3.6],[-2.7,3.6],[-4.3,-1.4]])E(62+dx,16+dy,3.2,3.2,t);E(62,16,2.3,2.3,yel);P(61,15,W);}
+  else if(c.hat==='catears'){ // băng đô tai mèo
+    E(40.5,26,27.5,24,t,(x,y)=>{const d=Math.pow((x-40.5)/27.5,2)+Math.pow((y-26)/24,2);return d>=.86&&y<=14;});
+    for(const [ax,dir] of [[22,1],[59,-1]])for(let y=-5;y<=9;y++){const w=(y+5)*.5;R(Math.round(ax-w),y,Math.round(ax+w),y,t);if(y>-1&&y<8)R(Math.round(ax-w*.45),y,Math.round(ax+w*.45),y,'#ff9eb0');}
+  }else if(c.hat==='headphones'){
+    E(40.5,26,31,28.5,'#3a3a4a',(x,y)=>{const d=Math.pow((x-40.5)/31,2)+Math.pow((y-26)/28.5,2);return d>=.86&&y<=22;});
+    R(6,21,13,40,t);R(68,21,75,40,t);R(6,21,7,40,tD);R(74,21,75,40,tD);R(9,24,10,30,tLL);R(71,24,72,30,tLL);
+  }else if(c.hat==='conical'){const N='#e8cf8a',ND='#c9a95e';for(let y=-5;y<=13;y++){const w=2+(y+5)*2.15;R(Math.round(40.5-w),y,Math.round(40.5+w),y,(y+5)%4===3?ND:N);}R(0,14,79,14,ND);}
+
+  // ================= viền =================
+  // viền đen quanh dáng người (bỏ qua bóng dưới chân)
+  const filled=(x,y)=>{const r=g[y];const v=r&&r[x];return !!v&&v!==SH;};
+  const out=[];
+  for(let y=0;y<AV_H;y++)for(let x=0;x<AV_W;x++)if(!filled(x,y)&&(filled(x+1,y)||filled(x-1,y)||filled(x,y+1)||filled(x,y-1)))out.push([x,y]);
+  out.forEach(([x,y])=>{g[y][x]=K;});
+  // viền sẫm chỗ tóc giáp da (cho các kiểu tóc đã cắt / thêm)
+  const isSk=v=>v===SK.S||v===SK.t;
+  const bd=[];for(let y=0;y<AV_H;y++)for(let x=0;x<AV_W;x++)if(g[y][x]===hr&&[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>isSk(g[y+dy]&&g[y+dy][x+dx])))bd.push([x,y]);
+  bd.forEach(([x,y])=>{g[y][x]=hrD;});
+  return g;
 }
 const _avCache={};
 function makeAvatar(cfg){
@@ -1343,7 +1436,7 @@ VIEWS.login=function(){
   }},h('label',{class:'lbl'},'Tên đăng nhập',user),h('label',{class:'lbl'},'Mật khẩu',pass),btn,
     h('p',{class:'hint'},'Quên mật khẩu? Hãy hỏi cô Thơ nhé.'));
   setTimeout(()=>user.focus(),50);
-  const stand=h('div',{class:'stand-l'},px(SP.girl,3));
+  const stand=h('div',{class:'stand-l'},px(SP.girl,1.5));
   return h('div',{class:'screen sky-screen'},clouds(),hudDeco(.6),
     h('main',{class:'login'},
       h('h1',{class:'logo'},h('span',{},'IELTS'),h('span',{},'QUEST')),
@@ -1377,7 +1470,7 @@ VIEWS.hub=function(){
   if(all&&!S.cheered){S.cheered=true;setTimeout(finalCongrats,400);}
   const root=h('div',{class:'screen sky-screen'},clouds(),
     h('header',{class:'topbar'},hudDeco(p,S.hearts),
-      h('button',{class:'who',title:'Lịch sử bài làm',onclick:()=>go('history')},px(myAvatar(),1),h('b',{},S.name)),
+      h('button',{class:'who',title:'Lịch sử bài làm',onclick:()=>go('history')},px(myAvatar(),.5,'sm'),h('b',{},S.name)),
       h('div',{class:'tb-actions'},sfxBtn(),h('button',{class:'btn btn-sm',onclick:()=>go('avatar')},'NHÂN VẬT'),h('button',{class:'btn btn-sm btn-ghost',onclick:logout},'ĐĂNG XUẤT'))),
     h('main',{class:'hub'},
       h('h1',{class:'hub-title'},'CHỌN KỸ NĂNG'),
@@ -1389,7 +1482,7 @@ VIEWS.hub=function(){
         h('span',{class:'chip'},'LỖI SAI (READING + LISTENING) ',h('b',{},String(err)))),
       all?h('div',{class:'banner-win'},px(SP.trophy,4),h('b',{},'EM ĐÃ HOÀN THÀNH TẤT CẢ BÀI THÁNG NÀY!')):null,
       S.hearts===0?h('div',{class:'banner-lose',role:'alert'},px(SP.heart,4,'dim'),h('b',{},'EM ĐÃ HẾT MẠNG! Cô sẽ liên hệ với phụ huynh. Em hãy gặp cô để được khôi phục mạng nhé.')):null),
-    h('div',{class:'stand-r'},px(myAvatar(),3)),ground());
+    h('div',{class:'stand-r'},px(myAvatar(),1.5)),ground());
   return root;
 };
 // ----- NHÂN VẬT: học sinh tự chọn ngoại hình -----
@@ -1405,14 +1498,16 @@ VIEWS.avatar=function({first}={}){
   const sec=t=>h('h3',{class:'av-h'},t);
   const rnd=a=>a[Math.floor(Math.random()*a.length)],rv=k=>rnd(opt(k))[0];
   function draw(){
-    prev.replaceChildren(px(makeAvatar(cfg),6));
+    prev.replaceChildren(px(makeAvatar(cfg),3));
     const T=cfg.top;
     opts.replaceChildren(
-      sec('👤 NGƯỜI'),pick('Giới tính','gender'),sw('Màu da',AV_SKIN,'skin'),
+      sec('👤 NGƯỜI'),pick('Giới tính','gender'),sw('Màu da',AV_SKIN,'skin'),sw('Màu mắt',AV_EYE,'eyeColor'),
       sec('💇 TÓC'),pick('Kiểu tóc','hairStyle'),sw('Màu tóc',AV_HAIR,'hair'),
       sec('👕 QUẦN ÁO'),pick('Áo','top'),
-      T==='uniform'?h('p',{class:'hint'},'Đồng phục: áo trắng, khăn quàng đỏ, quần / váy xanh.'):sw(T==='shirt'?'Màu cà vạt':T==='dress'?'Màu váy':'Màu áo',AV_COLOR,'color'),
-      T==='dress'?null:pick(cfg.gender==='boy'?'Quần':'Quần / váy','bottom'),T==='dress'||T==='uniform'?null:sw(cfg.gender==='boy'?'Màu quần':'Màu quần / váy',AV_BOTTOM,'bottomColor'),
+      T==='uniform'?h('p',{class:'hint'},'Đồng phục: áo trắng, khăn quàng đỏ, quần / váy xanh.'):T==='sailor'?h('p',{class:'hint'},'Áo thủy thủ: áo trắng, nơ đỏ; cổ áo cùng màu quần / váy.')
+        :sw({shirt:'Màu cà vạt',dress:'Màu váy',aodai:'Màu áo dài',suit:'Màu vest'}[T]||'Màu áo',AV_COLOR,'color'),
+      AV_ONEPIECE.includes(T)?null:pick(cfg.gender==='boy'?'Quần':'Quần / váy','bottom'),
+      T==='dress'||T==='aodai'||T==='uniform'?null:sw(T==='overalls'?'Màu yếm':cfg.gender==='boy'?'Màu quần':'Màu quần / váy',AV_BOTTOM,'bottomColor'),
       sec('👟 GIÀY'),pick('Giày','shoes'),sw('Màu giày',AV_SHOE,'shoeColor'),
       sec('🎩 PHỤ KIỆN'),pick('Mũ / nón','hat'),['none','crown','conical'].includes(cfg.hat)?null:sw('Màu mũ',AV_HATC,'hatColor'),
       pick('Kính','glasses'),cfg.gender==='boy'?pick('Râu','beard'):null);
@@ -1421,7 +1516,7 @@ VIEWS.avatar=function({first}={}){
     try{await api('/api/avatar',{avatar:cfg});S.avatar={...cfg};fanfare();toast('Đã lưu nhân vật của em!');go('hub');}
     catch(e){toast(e.message,'bad');}
   };
-  const random=()=>{cfg.gender=rv('gender');Object.assign(cfg,{hairStyle:rv('hairStyle'),hair:rnd(AV_HAIR),skin:rnd(AV_SKIN),top:rv('top'),color:rnd(AV_COLOR),bottom:rv('bottom'),bottomColor:rnd(AV_BOTTOM),
+  const random=()=>{cfg.gender=rv('gender');Object.assign(cfg,{hairStyle:rv('hairStyle'),hair:rnd(AV_HAIR),skin:rnd(AV_SKIN),eyeColor:rnd(AV_EYE),top:rv('top'),color:rnd(AV_COLOR),bottom:rv('bottom'),bottomColor:rnd(AV_BOTTOM),
     shoes:rv('shoes'),shoeColor:rnd(AV_SHOE),hat:Math.random()<.5?'none':rv('hat'),hatColor:rnd(AV_HATC),glasses:Math.random()<.6?'none':rv('glasses'),beard:Math.random()<.85?'none':rv('beard')});Object.assign(cfg,avNorm(cfg));draw();};
   draw();
   return h('div',{class:'screen sky-screen'},clouds(),
@@ -1564,8 +1659,8 @@ function buildMap(host,{W,skill,items,done,month}){
       h('div',{class:'g-s'},complete?'CHÚC MỪNG EM!':[px(SP.lock,3),N===0?' Chờ cô giao bài':` Hoàn thành ${done}/${N} bài để mở khóa`])));
   if(N===0)host.append(h('div',{class:'panel empty-note',style:{left:'16px',right:'16px',top:(H/2-70)+'px'}},h('b',{},'Chưa có bài nào!'),h('p',{},month===thisMonth()?'Tháng này cô chưa giao bài '+SK[skill].en+'. Em quay lại sau nhé!':'Tháng này không có bài '+SK[skill].en+'.')));
   // nhân vật đi trên đường
-  const av=h('div',{class:'avatar','aria-hidden':'true'},px(myAvatar(),2));host.append(av);
-  const place=pt=>{av.style.left=(pt.x-32)+'px';av.style.top=(pt.y-84)+'px';};
+  const av=h('div',{class:'avatar','aria-hidden':'true'},px(myAvatar(),1));host.append(av);
+  const place=pt=>{av.style.left=(pt.x-AV_W/2)+'px';av.style.top=(pt.y-AV_FEET+3)+'px';}; // chân nhân vật đặt trên đường // chân nhân vật đặt trên đường
   const lk=skill+month,prev=S.lastDone[lk];S.lastDone[lk]=done;
   const fromK=prev===undefined?done:Math.min(prev,N),toK=done;
   place(pts[Math.min(fromK*22,pts.length-1)]);
@@ -1982,34 +2077,62 @@ function meter(){
     else m='Tuyệt vời! Độ dài rất phù hợp.';
     el.className='meter '+c;msg.textContent=m;}};
 }
-// ===== PHÒNG THI SPEAKING: giám thị nữ (hình pixel: tóc dài, má hồng, môi đỏ) đọc thành tiếng từng câu, chữ chạy theo =====
-const EX_ROWS=["......KKKKKKKKKKKK......","....KKHHHHHHHHHHHHKK....","...KHHHHhhHHHHhhHHHHK...","..KHHHHHHHHhhHHHHHHHHK..","..KHHHHHSSSSSSSSHHHHHK..","..KHHHHSSSSSSSSSSHHHHK..","..KHHSShhhSSSShhhSSHHK..","..KHHSSKKKSSSSKKKSSHHK..","..KHHSSSEWSSSSWESSSHHK..","..KhHSSSEESSSSEESSSHhK..","..KHHSPPSSSssSSSPPSHHK..","..KHHSPPSSSSSSSSPPSHHK..","..KHHSSSSSSSSSSSSSSHHK..","..KhHSSSSSSSSSSSSSSHhK..","..KHHHSSSSSSSSSSSSHHHK..","..KHHHHHSSSSSSSSHHHHHK..","..KHHHHHHSSSSSSHHHHHHK..","..KHHHHHHssssssHHHHHHK..","..KHHHBBBWWWWWWBBBHHHK..",".KHHHBBBBWWWWWWBBBBHHHK.","KHHHBBBBbWWWWWWbBBBBHHHK","KHhHBBBBbbWWWWbbBBBBHhHK","KHHBWWWBBbWWWWbBBBBBBHHK","KBBBWKWBBBBWWBBBBBBBBBBK","KBBBBBBBBBBWWBBBBBBBBBBK","KBBBBBBBBBBWWBBBBBBBBBBK","KBBBBBBBBBBWWBBBBBBBBBBK"];
+// ===== PHÒNG THI SPEAKING: giám thị chibi do cô thiết kế (ielts_examiner_chibi_no_tie.html, khung 136×116, bỏ phần khung lời thoại) =====
 let _exSp=null;
 function examinerSprites(){
   if(_exSp)return _exSp;
-  const K='#1b1b2f',W='#ffffff';
+  const W=136,H=116,TOP=29; // bỏ 29 hàng trên cùng (khung lời thoại vẽ riêng bằng HTML)
+  const K='#17111d',WH='#ffffff',HC='#2b2230',HD='#150f1b',HL='#5a4a66',SK='#fbd9c0',SD='#eeb594',NV='#2c3e6b',NL='#4a63a0';
+  const L=()=>Array.from({length:H},()=>Array(W).fill(null));
+  const set=(a,x,y,c)=>{x=Math.round(x);y=Math.round(y);if(x>=0&&x<W&&y>=0&&y<H)a[y][x]=c;};
+  const rect=(a,x0,y0,x1,y1,c)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)set(a,x,y,c);};
+  const ell=(a,cx,cy,rx,ry,c,cond)=>{for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1&&(!cond||cond(x,y)))set(a,x,y,c);}};
+  const outline=(a,c)=>{const m=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(a[y][x])continue;if((y>0&&a[y-1][x])||(y<H-1&&a[y+1][x])||(x>0&&a[y][x-1])||(x<W-1&&a[y][x+1]))m.push([x,y]);}m.forEach(p=>{a[p[1]][p[0]]=c;});};
+  const M=L(),put=a=>{for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(a[y][x])M[y][x]=a[y][x];};
+  // giám thị: tóc đen dài, mái cong sang hai bên, vest xanh, sơ mi trắng cổ V, bảng tên
+  const C=L();
+  ell(C,68,57,27,24,HC);ell(C,68,78,26,9,HC);rect(C,63,74,73,79,SD);ell(C,68,98,26,20,NV);
+  for(let sy=79;sy<=92;sy++){const h=Math.max(1,Math.round(5-(sy-79)*.4));rect(C,68-h,sy,68+h,sy,WH);set(C,68-h-1,sy,NL);set(C,68-h-2,sy,NL);set(C,68+h+1,sy,NL);set(C,68+h+2,sy,NL);}
+  rect(C,52,89,58,92,WH);set(C,54,90,K);set(C,55,90,K);set(C,56,90,K);set(C,54,91,K);set(C,56,91,K);
+  ell(C,68,59,22,17,SK);
+  ell(C,68,55,27,22,HC,(x,y)=>{const dx=Math.abs(x-68),m=Math.min(dx,20);const yb=42+12*(1-Math.pow(1-m/20,2))+1.2*Math.sin(dx*.7)+8*Math.exp(-Math.pow(dx-21,2)/14);return y<=yb;});
+  ell(C,46,76,5,23,HC);ell(C,90,76,5,23,HC);
+  outline(C,K);
+  const bd=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(C[y][x]!==HC)continue;if((y>0&&C[y-1][x]===SK)||(y<H-1&&C[y+1][x]===SK)||(x>0&&C[y][x-1]===SK)||(x<W-1&&C[y][x+1]===SK))bd.push([x,y]);}
+  bd.forEach(p=>{C[p[1]][p[0]]=HD;});
+  for(let hx=50;hx<=86;hx++){if(Math.abs(hx-68)<6)continue;const hy=38+Math.round(Math.abs(hx-68)*.25);if(C[hy][hx]===HC)C[hy][hx]=HL;if(C[hy+1][hx]===HC&&Math.abs(hx-68)%2===0)C[hy+1][hx]=HL;}
+  for(let ly=66;ly<=90;ly++)for(const lx of [43,44,92,93])if(C[ly][lx]===HC)C[ly][lx]=HL;
+  const eye=(cx,cy,dir)=>{ell(C,cx,cy,3.8,5.4,'#3b2a55');for(let y=cy+1;y<=cy+5;y++)for(let x=cx-4;x<=cx+4;x++)if(C[y][x]==='#3b2a55')C[y][x]='#6a5aa8';
+    rect(C,cx-4,cy-6,cx+4,cy-5,K);set(C,cx+dir*5,cy-5,K);set(C,cx+dir*5,cy-4,K);rect(C,cx-2,cy-3,cx-1,cy-2,WH);set(C,cx+1,cy+3,WH);};
+  eye(57,62,-1);eye(79,62,1);
+  ell(C,53,69,4,2,'#f6a3a3',(x,y)=>C[y][x]===SK);ell(C,83,69,4,2,'#f6a3a3',(x,y)=>C[y][x]===SK);
+  set(C,68,66,'#e98a7f');
+  put(C);
+  // bàn gỗ, bảng tên, khay giấy, máy ghi âm, đồng hồ bấm giờ, cốc trà
+  rect(M,16,96,119,96,K);rect(M,16,97,119,100,'#d9a066');rect(M,16,97,16,100,K);rect(M,119,97,119,100,K);rect(M,16,101,119,101,K);
+  rect(M,20,102,115,112,'#8a5a2b');rect(M,20,102,20,112,K);rect(M,115,102,115,112,K);rect(M,20,113,115,113,K);
+  rect(M,46,102,46,112,'#6d4520');rect(M,89,102,89,112,'#6d4520');
+  rect(M,52,103,83,111,K);rect(M,53,104,82,110,WH);
+  rect(M,12,114,124,114,'rgba(0,0,0,0.15)');
+  rect(M,24,83,39,95,K);rect(M,25,84,38,94,WH);rect(M,27,87,36,87,'#8a93a5');rect(M,27,90,36,90,'#8a93a5');rect(M,27,93,33,93,'#8a93a5');rect(M,29,81,34,83,'#9aa4b2');
+  rect(M,84,87,91,95,K);rect(M,85,88,90,92,'#3a3f4f');rect(M,86,89,87,90,'#e74c3c');
+  rect(M,96,85,107,95,K);rect(M,97,87,106,92,'#9bd86b');rect(M,99,89,100,91,K);rect(M,103,89,104,91,K);rect(M,100,83,103,85,K);
+  rect(M,110,86,116,95,K);rect(M,111,88,115,94,WH);rect(M,111,88,115,89,'#6b4630');rect(M,117,88,119,92,K);rect(M,117,89,118,91,null);
+  set(M,112,84,'#c9d3df');set(M,113,83,'#c9d3df');set(M,114,82,'#c9d3df');
+  // chậu cây
+  const Pl=L();ell(Pl,127,92,4,6,'#4caf50');ell(Pl,132,95,3,5,'#4caf50');ell(Pl,123,96,3,5,'#4caf50');
+  rect(Pl,127,97,128,103,'#2e7d32');rect(Pl,122,104,133,112,'#c0623a');rect(Pl,121,104,134,106,'#d4724a');outline(Pl,K);put(Pl);
+  // miệng: khép khi im, mở khi đọc
   const frame=open=>{
-    const c=cv(68,58),x=c.getContext('2d');
-    const R=(cx,ry,w,hh,col)=>{x.fillStyle=col;x.fillRect(cx,ry,w,hh);};
-    const M=(rows,pal,ox,oy)=>rows.forEach((row,r)=>{for(let i=0;i<row.length;i++)if(row[i]!=='.')R(ox+i,oy+r,1,1,pal[row[i]]);});
-    const ox=22,oy=16;
-    M(EX_ROWS,{K,H:'#4a2f1e',h:'#6b4630',S:'#f2c29b',s:'#d9a07a',P:'#f59aac',E:K,W,B:'#2c3e6b',b:'#4a63a0'},ox,oy);
-    // môi đỏ: khép lại khi im, mở ra khi đọc
-    const LIP='#d42a43';
-    if(open){R(ox+10,oy+11,4,1,LIP);R(ox+10,oy+12,4,1,'#5a1424');R(ox+10,oy+13,4,1,LIP);}
-    else{R(ox+10,oy+12,4,1,LIP);R(ox+11,oy+13,2,1,LIP);}
-    // bàn gỗ, khay giấy, đồng hồ, cây xanh
-    R(8,43,52,1,K);R(8,44,52,2,'#d9a066');R(8,44,1,2,K);R(59,44,1,2,K);R(8,46,52,1,K);
-    R(10,47,48,8,'#8a5a2b');R(10,47,1,8,K);R(57,47,1,8,K);R(10,55,48,1,K);R(24,47,1,8,'#6d4520');R(43,47,1,8,'#6d4520');
-    R(26,48,16,5,K);R(27,49,14,3,W);R(6,56,56,1,'rgba(0,0,0,0.15)');
-    R(12,37,8,6,K);R(13,38,6,4,W);R(14,39,4,1,'#8a93a5');R(14,41,3,1,'#8a93a5');R(15,36,2,1,'#9aa4b2');
-    R(42,39,4,4,K);R(43,40,2,2,'#3a3f4f');R(43,40,1,1,'#e74c3c');
-    R(48,39,6,4,K);R(49,40,4,2,'#9bd86b');R(50,41,1,1,K);R(52,41,1,1,K);R(50,38,2,1,K);
-    R(55,39,4,4,K);R(56,40,2,2,W);R(56,40,2,1,'#6b4630');R(59,40,1,2,K);R(56,38,1,1,'#c9d3df');R(57,37,1,1,'#c9d3df');
-    M(["..GG..",".GGGG.","GGGgGG","GgGGgG",".GGGG.","..gg..","..gg..","KKKKKK","KRRRRK","KRRRRK","KRRRRK",".KRRK.",".KKKK."],{G:'#4caf50',g:'#2e7d32',K,R:'#c0623a'},61,43);
-    const o=cv(62,42);o.getContext('2d').drawImage(c,6,16,62,42,0,0,62,42);return o.toDataURL();
+    const c=cv(W,H-TOP),x=c.getContext('2d');
+    const R=(px_,py,w,hh,col)=>{x.fillStyle=col;x.fillRect(px_,py-TOP,w,hh);};
+    for(let y=TOP;y<H;y++)for(let i=0;i<W;i++)if(M[y][i])R(i,y,1,1,M[y][i]);
+    const LP='#c4565f';
+    if(open){R(65,70,1,1,LP);R(66,70,5,1,WH);R(71,70,1,1,LP);R(65,71,1,1,LP);R(66,71,5,1,'#7a2330');R(71,71,1,1,LP);R(66,72,5,1,LP);R(67,72,3,1,'#e88a96');}
+    else{R(65,70,1,1,LP);R(66,71,5,1,LP);R(71,70,1,1,LP);}
+    return c.toDataURL();
   };
-  return _exSp={closed:frame(false),open:frame(true),w:62,h:42};
+  return _exSp={closed:frame(false),open:frame(true),w:W,h:H-TOP};
 }
 // đọc thành tiếng (giọng Anh nếu máy có) + hiện chữ chạy từng chữ; máy không đọc được thì chữ chạy kèm tiếng bíp
 const Say={ok:'speechSynthesis' in window,voice:null,
@@ -2084,7 +2207,7 @@ function exSpeaking(a,sub){
     return A.root;
   }
   Timer.start(sub,A.upd);
-  const ex=examinerSprites(),face=h('img',{class:'exm-face',src:ex.closed,width:ex.w*4,height:ex.h*4,alt:'Giám thị'});
+  const ex=examinerSprites(),face=h('img',{class:'exm-face',src:ex.closed,width:ex.w*2,height:ex.h*2,alt:'Giám thị'});
   const text=h('div',{class:'exm-text','aria-live':'polite'}),tag=h('span',{class:'chip alt'});
   const stage=h('div',{class:'exm'},h('div',{class:'exm-bubble'},tag,text),face,h('div',{class:'exm-name px'},'EXAMINER'));
   const zone=h('div',{class:'rc-zone'}),stepsEl=h('div',{class:'steps',role:'tablist','aria-label':'Danh sách câu hỏi'});
@@ -2707,7 +2830,7 @@ function tStudents(){
     const cells=SKS.map(k=>{const x=skillStats(k,n);const pub=x.as.filter(a=>a.published).length;time+=x.time;err+=(k==='reading'||k==='listening')?x.err:0;
       return h('td',{},pub?h('span',{class:'tag '+(x.done>=pub?'green':'red')},`${x.done}/${pub}`):'—');});
     const leaves=Object.values(DB.subs).filter(x=>x.student===n).reduce((t,x)=>t+(x.leaves||0),0);
-    return h('tr',{},h('th',{scope:'row'},px(makeAvatar(s.avatar),1),' ',s.name,h('div',{class:'hint'},n),s.parent_phone?h('div',{class:'hint'},'SĐT PH: '+s.parent_phone):h('div',{class:'x hint'},'Chưa có SĐT phụ huynh'),s.mustChange?h('span',{class:'tag amber'},'Chưa đổi MK (đang là 1)'):null),
+    return h('tr',{},h('th',{scope:'row'},px(makeAvatar(s.avatar),.5,'sm'),' ',s.name,h('div',{class:'hint'},n),s.parent_phone?h('div',{class:'hint'},'SĐT PH: '+s.parent_phone):h('div',{class:'x hint'},'Chưa có SĐT phụ huynh'),s.mustChange?h('span',{class:'tag amber'},'Chưa đổi MK (đang là 1)'):null),
       h('td',{},h('span',{class:'tag '+(s.hearts===0?'red':s.hearts<3?'amber':'green')},'♥ '+s.hearts+'/3')),
       cells,h('td',{},fmtT(time)),h('td',{},String(err)),h('td',{},leaves?h('span',{class:'tag amber'},leaves+' lần'):'0'),
       h('td',{class:'acts'},

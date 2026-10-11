@@ -299,10 +299,10 @@ function phoneOf(b) {
 // nhân vật học sinh tự chọn: chỉ nhận đúng các lựa chọn có sẵn
 const AV_ENUM = {
   gender: ['girl', 'boy'], hairStyle: ['long', 'bob', 'ponytail', 'bun', 'pigtails', 'curly', 'short', 'sidepart', 'spiky', 'buzz', 'curlyshort', 'quiff'],
-  top: ['tee', 'blouse', 'polo', 'shirt', 'hoodie', 'sweater', 'jacket', 'dress', 'uniform'], bottom: ['pants', 'shorts', 'skirt'], shoes: ['school', 'sneaker', 'boot'],
-  hat: ['none', 'beret', 'cap', 'beanie', 'crown', 'bow', 'headphones', 'conical'], glasses: ['none', 'regular', 'round', 'sun'], beard: ['none', 'mustache', 'full'],
+  top: ['tee', 'blouse', 'polo', 'shirt', 'hoodie', 'sweater', 'jacket', 'cardigan', 'suit', 'sailor', 'overalls', 'dress', 'aodai', 'uniform'], bottom: ['pants', 'shorts', 'skirt'], shoes: ['school', 'sneaker', 'boot'],
+  hat: ['none', 'beret', 'cap', 'beanie', 'grad', 'crown', 'bow', 'flower', 'catears', 'headphones', 'conical'], glasses: ['none', 'regular', 'round', 'sun'], beard: ['none', 'mustache', 'full'],
 };
-const AV_COLOR_KEYS = { hair: '', skin: '', color: '', bottomColor: '#2f3a56', shoeColor: '#6b4423', hatColor: '#ef4b4b' }; // '' = bắt buộc
+const AV_COLOR_KEYS = { hair: '', skin: '', color: '', bottomColor: '#2f3a56', shoeColor: '#6b4423', hatColor: '#ef4b4b', eyeColor: '#6a5aa8' }; // '' = bắt buộc
 function cleanAvatar(v) {
   if (!v || typeof v !== 'object') fail(400, 'Nhân vật không hợp lệ');
   const a = {};
