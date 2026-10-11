@@ -63,8 +63,8 @@ const PARSE_SYSTEM = `You convert IELTS test papers (PDF pages, photos or pasted
 
 Copy passages and questions EXACTLY as printed. Do not invent, shorten, paraphrase or skip anything. Keep the original order. Leave out printed question numbers from items[].text, and leave out test-paper headers such as "READING PASSAGE 1" or "You should spend about 20 minutes on..." from passages (the website adds its own). A full Reading test has 3 passages and 40 questions; a Listening test has 3 or 4 sections. Recognise the structure and every question type yourself and reproduce the test in its original format. Convert whatever the document contains.
 
-Reading: put each passage in passages[] as clean HTML (<p>, <b>, <i>, <ul>, <table>), keeping paragraph letters (A, B, C...) where printed. section = passage number (1, 2, 3).
-Listening: passages = []. section = the section / part number exactly as printed (some tests have 3 sections, others 4).
+Reading: put each passage in passages[] as clean HTML (<p>, <b>, <i>, <ul>, <table>), keeping paragraph letters (A, B, C...) where printed. section = the position of the passage in passages[] (1 for the first passage you output). The document may hold only part of a test (e.g. only Reading Passage 2): then passages has just that passage and its groups use section = 1.
+Listening: passages = []. section = the section / part number exactly as printed (some tests have 3 sections, others 4; the document may hold only one section).
 
 Make one group per run of consecutive questions that share one instruction. Copy the instruction into instructions (keep line breaks). Choose preset:
 - mcq: choose ONE letter. items[].text = question, items[].options = option texts without their letters, answer = the letter, e.g. "B".
