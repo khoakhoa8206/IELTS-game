@@ -1,0 +1,20 @@
+# Netlify chỉ phục vụ giao diện (thư mục public). Mọi lệnh gọi /api/* được chuyển sang máy chủ Render,
+# nên trình duyệt coi như cùng một trang → cookie đăng nhập hoạt động, không bị chặn cookie bên thứ ba.
+# ĐỔI địa chỉ dưới đây thành địa chỉ Render của bạn.
+[build]
+  publish = "public"
+  command = "node make-playlist.js"  # tạo danh sách nhạc nền từ các file trong public/music
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://ielts-quest-api.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "same-origin"
+    Permissions-Policy = "microphone=(self)"

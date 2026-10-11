@@ -1,0 +1,7 @@
+node_modules/
+data/
+.env
+public/music/playlist.json
+# file nháp, không cần khi deploy
+*.zip
+/*.jpg

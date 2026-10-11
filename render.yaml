@@ -1,0 +1,30 @@
+# Render Blueprint cho máy chủ API. Các khóa bí mật (sync: false) điền trong Dashboard của Render.
+services:
+  - type: web
+    name: ielts-quest-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: HTTPS
+        value: "1"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: TEACHER_USER
+        sync: false
+      - key: TEACHER_PASSWORD
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: apodex/apodex-1.1-mini:free
+      - key: OPENROUTER_WRITING_MODEL
+        value: apodex/apodex-1.1-mini:free
+      - key: OPENROUTER_PDF_ENGINE
+        value: cloudflare-ai
