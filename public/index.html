@@ -139,8 +139,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sc-bar{height:16px;background:#fff;border:3px solid var(--ink)}
 .sc-bar i{display:block;height:100%;background:#3fcf59}
 .sc-meta{font-size:20px;margin-top:6px;color:#333;line-height:1.15}
-.sc-flag{position:absolute;top:-20px;right:14px;background:#c62828;color:#fff;font-family:var(--vt);font-size:23px;padding:3px 10px;display:flex;align-items:center;gap:6px;box-shadow:0 0 0 3px var(--ink)}
-.skill-card.green .sc-flag{background:#1f8a31}.skill-card.gray .sc-flag{background:#6b7280}
+.sc-flags{position:absolute;top:-20px;right:14px;display:flex;gap:10px}
+.sc-flag{background:#c62828;color:#fff;font-family:var(--vt);font-size:23px;padding:3px 10px;display:flex;align-items:center;gap:6px;box-shadow:0 0 0 3px var(--ink)}
+.skill-card.green .sc-flag{background:#1f8a31}.skill-card.gray .sc-flag{background:#6b7280}.skill-card .sc-flag.rv{background:#1565c0}
 .hub-sum{margin-top:32px}
 .banner-win{display:inline-flex;align-items:center;gap:14px;margin:18px auto 0;background:var(--yel);padding:12px 18px;box-shadow:0 0 0 4px var(--ink);font-size:28px}
 .banner-win b{font-weight:400}
@@ -1366,9 +1367,15 @@ const pubAt=a=>a.publishedAt||a.createdAt||a.deadline||0;
 const monthOf=a=>ymOf(pubAt(a));
 const thisMonth=()=>ymOf(Date.now());
 const monthName=m=>{const [y,mm]=m.split('-');return `THÁNG ${+mm}/${y}`;};
+// Reading/Listening dưới 80% là CHƯA ĐẠT: vẫn tính là chưa làm bài
+const PASS_PCT=80;
+const failed=(a,s)=>(a.skill==='reading'||a.skill==='listening')&&s.status==='submitted'&&!!s.result&&s.result.total>0&&Math.round(s.result.score/s.result.total*100)<PASS_PCT;
+const doneOf=(a,s)=>!!s&&s.status==='submitted'&&!failed(a,s);
+// Writing/Speaking cô đã chấm (không tính AI chấm)
+const reviewed=s=>!!s&&s.status==='submitted'&&!!s.feedback&&s.feedback.by!=='ai';
 function skillStats(skill,name,month){
   const as=month?skillAssignments(skill).filter(a=>monthOf(a)===month).sort((x,y)=>pubAt(x)-pubAt(y)):skillAssignments(skill);let done=0,time=0,err=0;
-  as.forEach(a=>{const s=getSub(a.id,name);if(s){time+=s.timeSec||0;if(s.status==='submitted'){done++;if(s.result)err+=s.result.errors||0;}}});
+  as.forEach(a=>{const s=getSub(a.id,name);if(s){time+=s.timeSec||0;if(s.status==='submitted'){if(!failed(a,s))done++;if(s.result)err+=s.result.errors||0;}}});
   return {as,total:as.length,done,time,err};
 }
 const skillComplete=(k,name,month)=>{const t=skillStats(k,name,month);return t.total>0&&t.done===t.total;};
@@ -1453,7 +1460,7 @@ function sfxBtn(){
 VIEWS.hub=function(){
   const cur=thisMonth();
   const st=SKS.map(k=>({k,...skillStats(k,S.student,cur),
-    old:skillAssignments(k).filter(a=>monthOf(a)<cur&&getSub(a.id,S.student)?.status!=='submitted').length}));
+    old:skillAssignments(k).filter(a=>monthOf(a)<cur&&!doneOf(a,getSub(a.id,S.student))).length}));
   const tot=st.reduce((s,x)=>s+x.total,0),dn=st.reduce((s,x)=>s+x.done,0),time=st.reduce((s,x)=>s+x.time,0),err=st.reduce((s,x)=>s+x.err,0);
   const p=tot?dn/tot:0;
   const cards=st.map(x=>{
@@ -1464,7 +1471,9 @@ VIEWS.hub=function(){
         h('div',{class:'sc-bar'},h('i',{style:{width:(x.total?x.done/x.total*100:0)+'%'}})),
         h('div',{class:'sc-meta'},empty?'Tháng này cô chưa giao bài':`Đã xong ${x.done}/${x.total} bài · ⏱ ${fmtT(x.time)}`+(x.k==='reading'||x.k==='listening'?` · Lỗi ${x.err}`:'')),
         x.old?h('div',{class:'sc-old'},`⚠ còn ${x.old} bài tháng trước chưa làm`):null),
-      h('div',{class:'sc-flag'},empty?'CHỜ BÀI':comp?[px(SP.check,3),' ĐÃ HOÀN THÀNH']:`CÒN ${x.total-x.done}`));
+      h('div',{class:'sc-flags'},
+        (x.k==='writing'||x.k==='speaking')&&x.as.some(a=>reviewed(getSub(a.id,S.student)))?h('div',{class:'sc-flag rv',title:'Cô đã nhận xét, em vào xem nhé!'},'✎ ĐÃ NHẬN XÉT'):null,
+        h('div',{class:'sc-flag'},empty?'CHỜ BÀI':comp?[px(SP.check,3),' ĐÃ HOÀN THÀNH']:`CÒN ${x.total-x.done}`)));
   });
   const all=allSkillsComplete(S.student);
   if(all&&!S.cheered){S.cheered=true;setTimeout(finalCongrats,400);}
@@ -1637,17 +1646,17 @@ function buildMap(host,{W,skill,items,done,month}){
   host.append(h('div',{class:'start-sign','aria-hidden':'true',style:{left:m+'px',top:(H-96)+'px'}},'START'));
   // các chặng
   items.forEach((it,i)=>{
-    const n=nodes[i],a=it.a,sub=it.sub,isDone=sub&&sub.status==='submitted',dl=dlInfo(a,sub),info=nodeInfo(a,sub);
-    const inProg=!isDone&&sub&&(sub.timeSec>0||Object.keys(sub.answers||{}).length>0||totalWords(sub)>0||(sub.speaking&&Object.keys(sub.speaking.items||{}).length));
+    const n=nodes[i],a=it.a,sub=it.sub,isDone=doneOf(a,sub),fail=sub&&failed(a,sub),dl=dlInfo(a,sub),info=nodeInfo(a,sub);
+    const inProg=!isDone&&!fail&&sub&&(sub.timeSec>0||Object.keys(sub.answers||{}).length>0||totalWords(sub)>0||(sub.speaking&&Object.keys(sub.speaking.items||{}).length));
     host.append(
       h('div',{class:'pin '+(isDone?'done':'todo'),'aria-hidden':'true',style:{left:(n.bx+bw/2-22)+'px',top:(n.y-bh/2-62)+'px'}},px(isDone?SP.pinGreen:SP.pinRed,4)),
       h('button',{class:'node '+(isDone?'green':'red'),style:{left:n.bx+'px',top:(n.y-bh/2)+'px',width:bw+'px',height:bh+'px'},title:a.title,
-        'aria-label':`Bài ${i+1}: ${a.title}. ${isDone?'Đã hoàn thành':'Chưa hoàn thành'}`,onclick:()=>go('ex',{id:a.id})},
+        'aria-label':`Bài ${i+1}: ${a.title}. ${isDone?'Đã hoàn thành':fail?'Chưa đạt':'Chưa hoàn thành'}`,onclick:()=>go('ex',{id:a.id})},
         h('div',{class:'n-top'},`BÀI ${i+1} · ${badgeOf(a)}`),
         h('div',{class:'n-title'},a.title),
         h('div',{class:'n-info'},info.length?info:' '),
         h('div',{class:'n-dl '+(dl?dl.cls:'')},dl?dl.text:'Không có hạn nộp'),
-        h('div',{class:'n-ribbon'},isDone?[px(SP.check,3),' ĐÃ HOÀN THÀNH']:(inProg?'ĐANG LÀM DỞ':'CHƯA LÀM'))));
+        h('div',{class:'n-ribbon'},isDone?[px(SP.check,3),' ĐÃ HOÀN THÀNH']:fail?`⚠ CHƯA ĐẠT · DƯỚI ${PASS_PCT}%`:(inProg?'ĐANG LÀM DỞ':'CHƯA LÀM'))));
   });
   // đích
   const g=nodes[N],complete=N>0&&done===N;
@@ -2717,9 +2726,9 @@ VIEWS.tSubs=function({id}){
   const a=getAssignment(id);if(!a)return tShell(h('p',{},'Không tìm thấy bài.'),{back:()=>go('tHome',{tab:'reading'})});
   const names=allStudents();
   const rows=names.map(u=>{
-    const s=getSub(a.id,u),st=!s?'Chưa làm':s.status==='submitted'?'Đã nộp':'Đang làm',dl=s?dlInfo(a,s):null;
+    const s=getSub(a.id,u),st=!s?'Chưa làm':failed(a,s)?'Chưa đạt':s.status==='submitted'?'Đã nộp':'Đang làm',dl=s?dlInfo(a,s):null;
     const manual=a.skill==='writing'||a.skill==='speaking';
-    return h('tr',{},h('th',{scope:'row'},stuName(u)),h('td',{},h('span',{class:'tag '+(!s?'red':s.status==='submitted'?'green':'amber')},st)),
+    return h('tr',{},h('th',{scope:'row'},stuName(u)),h('td',{},h('span',{class:'tag '+(!s||failed(a,s)?'red':s.status==='submitted'?'green':'amber')},st)),
       h('td',{},s?fmtT(s.timeSec):'—'),h('td',{},resultText(a,s)),h('td',{},s&&s.submittedAt?fmtDate(s.submittedAt)+(dl&&dl.cls==='late'?' (trễ)':''):'—'),h('td',{},cheatText(a,s)),
       h('td',{class:'acts'},s&&s.status==='submitted'?(manual?h('button',{class:'btn btn-sm btn-blue',onclick:()=>go('tGrade',{id:a.id,key:s.key})},s.feedback?'XEM / SỬA ĐIỂM':'CHẤM BÀI'):h('button',{class:'btn btn-sm btn-blue',onclick:()=>reviewDialog(a,s)},'XEM LỖI')):null,
         s?h('button',{class:'btn btn-sm btn-red',onclick:async()=>{if(await confirmDlg(`Xóa bài làm của ${stuName(u)}? Em ấy sẽ được làm lại bài này từ đầu.`,{yes:'XÓA',no:'GIỮ',danger:true})){try{await removeSub(s.key);}catch(e){toast(e.message,'bad');}go('tSubs',{id:a.id});}}},'CHO LÀM LẠI'):null));
