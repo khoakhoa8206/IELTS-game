@@ -268,3 +268,23 @@ test('nhạc nền + chỉ lưu SĐT phụ huynh + đặt lại mật khẩu', a
   assert.equal((await H('/api/login', { username: 'hoangtho', password: '1' })).status, 200);
   assert.equal((await H('/api/me')).data.me.mustChange, true);
 });
+
+test('chia lớp: bài chọn lớp chỉ học sinh trong lớp thấy', async () => {
+  const T = client(), A = client(), B = client();
+  await T('/api/login', { username: 'co', password: 'secret123' });
+  for (const u of ['lopa1', 'lopb1']) await T('/api/students', { name: u, username: u });
+  const c = (await T('/api/classes', { name: 'Lớp A' })).data;
+  assert.equal((await T('/api/classes/' + c.id + '/members', { usernames: ['lopa1'] }, 'PUT')).status, 200);
+  const S = { id: 'cls-spk', skill: 'speaking', title: 'Chỉ lớp A', deadline: Date.now() + 864e5, classes: [c.id, 'khong-co'], questions: [{ id: 'q', text: 'Hi?' }] };
+  await T('/api/assignment', S, 'PUT'); await T('/api/publish', { skill: 'speaking' });
+  const all = (await T('/api/all')).data;
+  assert.deepEqual(all.assignments.find(a => a.id === S.id).classes, [c.id]); // bỏ mã lớp không tồn tại
+  assert.deepEqual(all.students.find(s => s.username === 'lopa1').classes, [c.id]);
+  await A('/api/login', { username: 'lopa1', password: '1' }); await B('/api/login', { username: 'lopb1', password: '1' });
+  assert.ok((await A('/api/me')).data.assignments.some(a => a.id === S.id));
+  assert.ok(!(await B('/api/me')).data.assignments.some(a => a.id === S.id));
+  assert.equal((await T('/api/classes/' + c.id, undefined, 'DELETE')).status, 409); // lớp còn bài thì không xóa được
+  await T('/api/assignment/' + S.id, undefined, 'DELETE');
+  assert.equal((await T('/api/classes/' + c.id, undefined, 'DELETE')).status, 200);
+  assert.deepEqual((await T('/api/all')).data.students.find(s => s.username === 'lopa1').classes, []);
+});

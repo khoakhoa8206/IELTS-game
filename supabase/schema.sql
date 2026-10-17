@@ -12,11 +12,19 @@ create table if not exists users (
   zero_at       bigint,                    -- lúc phát hiện hết mạng (đã báo phụ huynh)
   notify_status text,
   avatar        jsonb,                     -- nhân vật học sinh tự chọn
+  classes       jsonb not null default '[]', -- mã các lớp em thuộc về
   created       bigint
 );
 -- cho database đã tạo từ bản trước
 alter table users add column if not exists avatar jsonb;
 alter table users add column if not exists must_change boolean not null default false;
+alter table users add column if not exists classes jsonb not null default '[]';
+
+create table if not exists classes (
+  id      text primary key,
+  name    text not null,
+  created bigint
+);
 
 create table if not exists sessions (
   token    text primary key,
@@ -43,6 +51,7 @@ alter table users       enable row level security;
 alter table sessions    enable row level security;
 alter table assignments enable row level security;
 alter table subs        enable row level security;
+alter table classes     enable row level security;
 
 -- kho file riêng tư: audio bài nghe, ảnh đề, file ghi âm Speaking, PDF đề cho AI đọc (tối đa 100 MB/file)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

@@ -1050,7 +1050,7 @@ function initArt(){
 function rng(seed){let s=seed>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
 function hashStr(t){let x=2166136261;for(let i=0;i<t.length;i++){x^=t.charCodeAt(i);x=Math.imul(x,16777619);}return x>>>0;}
 // ===== LƯU TRỮ: máy chủ (bài tập, bài nộp) + kho file Supabase (audio, ảnh, ghi âm) =====
-const DB={assignments:[],subs:{},students:[],ai:false,at:0,stale:false,mut:0,sig:''};
+const DB={assignments:[],subs:{},students:[],classes:[],ai:false,at:0,stale:false,mut:0,sig:''};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 // máy chủ Render bản miễn phí ngủ khi không ai dùng: GET được thử lại vài lần trong lúc máy chủ thức dậy
 // thao tác không làm đổi dữ liệu cần tải lại (hoặc đã tự cập nhật tại máy)
@@ -1114,7 +1114,7 @@ async function loadAll(bg){
   const old=DB.subs,keep=s=>S.role==='student'&&old[s.key]&&old[s.key].status==='draft'&&s.status==='draft'?old[s.key]:s;
   DB.assignments=d.assignments||[];DB.subs={};(d.subs||[]).forEach(s=>{DB.subs[s.key]=keep(s);});
   if(S.role==='student')for(const k in old)if(!DB.subs[k]&&old[k].status==='draft')DB.subs[k]=old[k]; // bài mới mở ở máy, chưa kịp lưu nháp
-  DB.students=d.students||[];DB.ai=!!d.ai;
+  DB.students=d.students||[];DB.classes=d.classes||[];DB.ai=!!d.ai;
   if(d.hearts!=null)S.hearts=d.hearts;
   if(S.role==='student'&&d.me)S.avatar=d.me.avatar||null;
   return true;
@@ -1151,6 +1151,10 @@ async function saveSub(s){
 async function removeSub(key){const s=DB.subs[key];await api(`/api/sub/${s.aid}/${s.student}`,undefined,'DELETE');}
 function allStudents(){return DB.students.map(s=>s.username);}
 const stuName=u=>(DB.students.find(s=>s.username===u)||{}).name||u;
+// bài có chọn lớp chỉ giao cho học sinh trong lớp đó; không chọn lớp = tất cả. Học sinh chỉ nhận bài của mình nên luôn đúng
+const assignedTo=(a,u)=>S.role!=='teacher'||!(a.classes||[]).length||a.classes.some(c=>((DB.students.find(s=>s.username===u)||{}).classes||[]).includes(c));
+const studentsOf=a=>allStudents().filter(u=>assignedTo(a,u));
+const classLabel=a=>(a.classes||[]).length?'LỚP '+a.classes.map(id=>(DB.classes.find(c=>c.id===id)||{}).name||'?').join(', '):'TẤT CẢ HỌC SINH';
 function problemsBody(msg,list){return h('div',{},h('p',{class:'dlg-msg'},msg),list&&list.length?h('ul',{class:'prob-list'},list.map(p=>h('li',{},p))):null);}
 // ===== TRÌNH SOẠN THẢO KIỂU WORD (in đậm, nghiêng, gạch chân, gạch bỏ, màu chữ, highlight...) =====
 const OK_TAGS=new Set(['B','STRONG','I','EM','U','S','STRIKE','DEL','SPAN','FONT','P','DIV','BR','UL','OL','LI','H1','H2','H3','H4','SUB','SUP','BLOCKQUOTE','IMG','TABLE','TBODY','THEAD','TR','TD','TH','MARK','HR']);
@@ -1374,7 +1378,7 @@ const doneOf=(a,s)=>!!s&&s.status==='submitted'&&!failed(a,s);
 // Writing/Speaking cô đã chấm (không tính AI chấm)
 const reviewed=s=>!!s&&s.status==='submitted'&&!!s.feedback&&s.feedback.by!=='ai';
 function skillStats(skill,name,month){
-  const as=month?skillAssignments(skill).filter(a=>monthOf(a)===month).sort((x,y)=>pubAt(x)-pubAt(y)):skillAssignments(skill);let done=0,time=0,err=0;
+  const as=(month?skillAssignments(skill).filter(a=>monthOf(a)===month).sort((x,y)=>pubAt(x)-pubAt(y)):skillAssignments(skill)).filter(a=>assignedTo(a,name));let done=0,time=0,err=0;
   as.forEach(a=>{const s=getSub(a.id,name);if(s){time+=s.timeSec||0;if(s.status==='submitted'){if(!failed(a,s))done++;if(s.result)err+=s.result.errors||0;}}});
   return {as,total:as.length,done,time,err};
 }
@@ -2347,7 +2351,7 @@ function tShell(content,{back=null,title=''}={}){
 async function publishSkill(skill){
   const drafts=DB.assignments.filter(a=>a.skill===skill&&!a.published).length;
   if(!drafts){alertDlg('Không có bài mới nào để giao. Hãy tạo bài mới trước.');return;}
-  if(!await confirmDlg(`Giao ${drafts} bài ${SK[skill].en} mới cho tất cả học sinh? Sau khi giao, học sinh sẽ thấy bài ngay.`,{yes:'GIAO BÀI',no:'HỦY'}))return;
+  if(!await confirmDlg(`Giao ${drafts} bài ${SK[skill].en} mới? Mỗi bài giao cho lớp đã chọn trong bài (không chọn lớp = tất cả học sinh). Sau khi giao, học sinh sẽ thấy bài ngay.`,{yes:'GIAO BÀI',no:'HỦY'}))return;
   try{const r=await api('/api/publish',{skill});fanfare();toast(`Đã giao ${r.n} bài ${SK[skill].en} cho học sinh!`);go('tHome',{tab:skill});}
   catch(e){beep(180,.25,'sawtooth');dialog({title:'KIỂM TRA LẠI',body:problemsBody(e.message,e.problems),buttons:[{label:'ĐÃ HIỂU',value:true,cls:'btn-green'}]});}
 }
@@ -2359,7 +2363,7 @@ VIEWS.tHome=function({tab='reading'}){
 
 // ----- danh sách bài -----
 function tSkillList(skill){
-  const as=skillAssignments(skill),nStu=allStudents().length;
+  const as=skillAssignments(skill);
   const move=async(a,dir)=>{
     as.forEach((x,k)=>{x.order=k*10;});const j=as.indexOf(a)+dir;if(j<0||j>=as.length)return;
     const b=as[j];const t=a.order;a.order=b.order;b.order=t;
@@ -2367,12 +2371,12 @@ function tSkillList(skill){
     go('tHome',{tab:skill});
   };
   const cards=as.map((a,i)=>{
-    const subs=Object.values(DB.subs).filter(s=>s.aid===a.id),n=subs.filter(s=>s.status==='submitted').length,dl=dlInfo(a,null);
+    const stu=studentsOf(a),n=stu.filter(u=>(getSub(a.id,u)||{}).status==='submitted').length,dl=dlInfo(a,null);
     return h('article',{class:'t-card'},
       h('div',{class:'t-card-main'},
         h('div',{class:'t-card-t'},h('span',{class:'chip alt'},`BÀI ${i+1}`),h('b',{},a.title),h('span',{class:'chip'},badgeOf(a)),
-          h('span',{class:'chip '+(a.published?'good':'bad')},a.published?'ĐÃ GIAO':'BẢN NHÁP')),
-        h('div',{class:'t-card-m'},dl?h('span',{class:'n-dl '+dl.cls},dl.text):h('span',{class:'x'},'Chưa đặt hạn nộp'),a.published?h('span',{},` · Đã nộp ${n}/${nStu} học sinh`):null)),
+          h('span',{class:'chip '+(a.published?'good':'bad')},a.published?'ĐÃ GIAO':'BẢN NHÁP'),h('span',{class:'chip'},classLabel(a))),
+        h('div',{class:'t-card-m'},dl?h('span',{class:'n-dl '+dl.cls},dl.text):h('span',{class:'x'},'Chưa đặt hạn nộp'),a.published?h('span',{},` · Đã nộp ${n}/${stu.length} học sinh`):null)),
       h('div',{class:'t-card-a'},
         h('button',{class:'btn btn-sm btn-ghost','aria-label':'Chuyển lên',disabled:i===0,onclick:()=>move(a,-1)},'↑'),
         h('button',{class:'btn btn-sm btn-ghost','aria-label':'Chuyển xuống',disabled:i===as.length-1,onclick:()=>move(a,1)},'↓'),
@@ -2664,11 +2668,13 @@ VIEWS.tEdit=function({skill,id,draft,ai}){
   const title=h('input',{class:'inp',type:'text',maxlength:'80',placeholder:({reading:'Ví dụ: Cambridge 19 – Test 1 Reading',listening:'Ví dụ: Cambridge 19 – Test 1 Listening',writing:'Ví dụ: Cambridge 19 – Test 1 Writing',speaking:'Ví dụ: Speaking – Hometown & Hobbies'})[skill],value:a.title||'','aria-label':'Tên bài'});
   const dl=h('input',{class:'inp narrow-dt',type:'datetime-local',value:a.deadline?toLocalInput(a.deadline):'','aria-label':'Hạn nộp'});
   const ins=h('textarea',{class:'ta',rows:2,placeholder:({reading:'Ví dụ: Đọc 3 passage và trả lời 40 câu trong 60 phút.',listening:'Ví dụ: Nghe 4 part và trả lời 40 câu.',writing:'Ví dụ: Làm cả 2 task trong 60 phút.',speaking:'Ví dụ: Trả lời đầy đủ, mỗi câu khoảng 20–40 giây.'})[skill],'aria-label':'Hướng dẫn ngắn'});ins.value=a.instructions||'';
+  const cls=DB.classes.map(c=>h('label',{class:'inline'},h('input',{type:'checkbox',value:c.id,checked:(a.classes||[]).includes(c.id)}),c.name));
+  const pickCls=()=>{a.classes=cls.map(l=>l.firstChild).filter(i=>i.checked).map(i=>i.value);};
   const form=skill==='reading'?readingForm(a):skill==='listening'?listeningForm(a):skill==='writing'?writingForm(a):speakingForm(a);
   const err=h('div',{class:'form-err',role:'alert'});
   const saveBtn=h('button',{class:'btn btn-green btn-lg',onclick:()=>save()},'LƯU BÀI');
   // giữ những gì cô đang nhập vào bài (dùng khi xem trước hoặc khi AI đổ đề vào)
-  const keep=()=>{a.title=title.value.trim();a.instructions=ins.value.trim();if(dl.value)a.deadline=new Date(dl.value).getTime();form.collect();};
+  const keep=()=>{pickCls();a.title=title.value.trim();a.instructions=ins.value.trim();if(dl.value)a.deadline=new Date(dl.value).getTime();form.collect();};
   const objective=skill==='reading'||skill==='listening';
   const aiBox=objective?aiImportBox(skill,res=>{
     keep();
@@ -2685,7 +2691,7 @@ VIEWS.tEdit=function({skill,id,draft,ai}){
     if(!title.value.trim()){err.textContent='Hãy nhập tên bài.';title.focus();return;}
     if(!dl.value){err.textContent='Hãy đặt hạn nộp. Mỗi lần học sinh nộp trễ sẽ mất 1 mạng.';dl.focus();return;}
     const e=form.collect();if(e){err.textContent=e;return;}
-    a.title=title.value.trim();a.instructions=ins.value.trim();a.deadline=new Date(dl.value).getTime();a.skill=skill;
+    pickCls();a.title=title.value.trim();a.instructions=ins.value.trim();a.deadline=new Date(dl.value).getTime();a.skill=skill;
     if(a.groups)a.groups.sort((x,y)=>(x.section||1)-(y.section||1));
     if(a.order==null)a.order=Date.now();
     saveBtn.disabled=true;
@@ -2694,6 +2700,7 @@ VIEWS.tEdit=function({skill,id,draft,ai}){
   }
   return tShell(h('div',{class:'t-content form'},
     field('Tên bài',title),field('Hạn nộp',dl,'Quá hạn học sinh vẫn làm được, nhưng bài bị đánh dấu nộp trễ và học sinh mất 1 mạng.'),objective?null:field('Hướng dẫn ngắn (không bắt buộc)',ins),
+    field('Giao cho lớp',cls.length?h('div',{class:'row-btns'},cls):h('p',{class:'hint'},'Chưa có lớp nào (tạo lớp ở tab HỌC SINH).'),'Không chọn lớp nào = giao cho tất cả học sinh.'),
     aiBox,form.el,err,
     h('div',{class:'foot'},h('button',{class:'btn btn-ghost',onclick:()=>go('tHome',{tab:skill})},'HỦY'),h('span',{class:'row-btns'},prevBtn,saveBtn))),
     {back:()=>go('tHome',{tab:skill}),title:(old?'SỬA BÀI · ':'TẠO BÀI MỚI · ')+SK[skill].en});
@@ -2724,7 +2731,7 @@ function reviewDialog(a,s){
 }
 VIEWS.tSubs=function({id}){
   const a=getAssignment(id);if(!a)return tShell(h('p',{},'Không tìm thấy bài.'),{back:()=>go('tHome',{tab:'reading'})});
-  const names=allStudents();
+  const names=studentsOf(a);
   const rows=names.map(u=>{
     const s=getSub(a.id,u),st=!s?'Chưa làm':failed(a,s)?'Chưa đạt':s.status==='submitted'?'Đã nộp':'Đang làm',dl=s?dlInfo(a,s):null;
     const manual=a.skill==='writing'||a.skill==='speaking';
@@ -2734,9 +2741,9 @@ VIEWS.tSubs=function({id}){
         s?h('button',{class:'btn btn-sm btn-red',onclick:async()=>{if(await confirmDlg(`Xóa bài làm của ${stuName(u)}? Em ấy sẽ được làm lại bài này từ đầu.`,{yes:'XÓA',no:'GIỮ',danger:true})){try{await removeSub(s.key);}catch(e){toast(e.message,'bad');}go('tSubs',{id:a.id});}}},'CHO LÀM LẠI'):null));
   });
   const content=h('div',{class:'t-content'},
-    h('div',{class:'res-banner'},h('span',{class:'chip alt'},badgeOf(a)),(a.deadline?h('span',{class:'chip'},'Hạn: '+fmtDate(a.deadline)):null),h('span',{class:'chip'},`ĐÃ NỘP ${Object.values(DB.subs).filter(s=>s.aid===a.id&&s.status==='submitted').length}/${names.length}`)),
+    h('div',{class:'res-banner'},h('span',{class:'chip alt'},badgeOf(a)),(a.deadline?h('span',{class:'chip'},'Hạn: '+fmtDate(a.deadline)):null),h('span',{class:'chip'},classLabel(a)),h('span',{class:'chip'},`ĐÃ NỘP ${names.filter(u=>(getSub(a.id,u)||{}).status==='submitted').length}/${names.length}`)),
     names.length?h('div',{class:'table-wrap'},cardTable(h('table',{class:'table'},h('thead',{},h('tr',{},['Học sinh','Trạng thái','Thời gian','Kết quả','Nộp lúc','Dấu hiệu gian lận',''].map(t=>h('th',{scope:'col'},t)))),h('tbody',{},rows)))):
-      h('p',{class:'empty'},'Chưa có học sinh nào. Hãy tạo tài khoản ở tab HỌC SINH.'));
+      h('p',{class:'empty'},(a.classes||[]).length?'Lớp được giao chưa có học sinh nào. Thêm học sinh vào lớp ở tab HỌC SINH.':'Chưa có học sinh nào. Hãy tạo tài khoản ở tab HỌC SINH.'));
   return tShell(content,{back:()=>go('tHome',{tab:a.skill}),title:a.title});
 };
 
@@ -2818,6 +2825,34 @@ async function restoreLives(s){
   if(!await confirmDlg(`Khôi phục đủ 3 mạng cho ${s.name}? Hãy chắc chắn cô đã liên hệ với phụ huynh.`,{yes:'KHÔI PHỤC',no:'HỦY'}))return;
   try{await api(`/api/students/${s.username}/restore`,{});toast('Đã khôi phục 3 mạng cho '+s.name);go('tHome',{tab:'students'});}catch(e){toast(e.message,'bad');}
 }
+// ----- lớp: tạo lớp, tích chọn học sinh từ danh sách -----
+function classMembers(c){
+  const boxes=DB.students.map(s=>h('label',{class:'inline'},h('input',{type:'checkbox',value:s.username,checked:(s.classes||[]).includes(c.id)}),`${s.name} (${s.username})`));
+  const body=h('div',{class:'data-dlg'},boxes.length?boxes:h('p',{class:'hint'},'Chưa có học sinh nào. Hãy cấp tài khoản trước.'));
+  dialog({title:'HỌC SINH LỚP '+c.name.toUpperCase(),body,buttons:[{label:'HỦY',value:false,cls:'btn-ghost'},{label:'LƯU',value:true,cls:'btn-green'}]}).then(async ok=>{
+    if(!ok)return;
+    const usernames=boxes.map(l=>l.firstChild).filter(i=>i.checked).map(i=>i.value);
+    try{await api(`/api/classes/${c.id}/members`,{usernames},'PUT');toast(`Lớp ${c.name} có ${usernames.length} học sinh.`);go('tHome',{tab:'students'});}catch(e){toast(e.message,'bad');}
+  });
+}
+function renameClass(c){
+  const i=h('input',{class:'inp',type:'text',maxlength:'40','aria-label':'Tên lớp'});i.value=c.name;
+  dialog({title:'ĐỔI TÊN LỚP',body:h('div',{class:'data-dlg'},field('Tên lớp',i)),buttons:[{label:'HỦY',value:false,cls:'btn-ghost'},{label:'LƯU',value:true,cls:'btn-green'}]}).then(async ok=>{
+    if(!ok)return;
+    try{await api('/api/classes/'+c.id,{name:i.value},'PATCH');toast('Đã đổi tên lớp.');go('tHome',{tab:'students'});}catch(e){toast(e.message,'bad');}
+  });
+}
+function tClasses(){
+  const nm=h('input',{class:'inp',type:'text',maxlength:'40',placeholder:'Tên lớp, ví dụ: IELTS 6.5 tối thứ 2','aria-label':'Tên lớp'});
+  const add=async()=>{try{const c=await api('/api/classes',{name:nm.value});toast(`Đã tạo lớp ${c.name}. Bấm HỌC SINH để thêm em vào lớp.`);go('tHome',{tab:'students'});}catch(e){toast(e.message,'bad');}};
+  return h('section',{class:'data-box'},h('h3',{class:'pane-h'},'LỚP HỌC'),
+    h('div',{class:'row-btns'},nm,h('button',{class:'btn btn-green',onclick:add},'+ TẠO LỚP')),
+    DB.classes.map(c=>{const n=DB.students.filter(s=>(s.classes||[]).includes(c.id)).length;
+      return h('div',{class:'t-card'},h('div',{class:'t-card-main'},h('b',{},c.name),h('div',{class:'hint'},`${n} học sinh`)),
+        h('div',{class:'t-card-a'},h('button',{class:'btn btn-sm btn-blue',onclick:()=>classMembers(c)},'HỌC SINH'),h('button',{class:'btn btn-sm',onclick:()=>renameClass(c)},'ĐỔI TÊN'),
+          h('button',{class:'btn btn-sm btn-red',onclick:async()=>{if(await confirmDlg(`Xóa lớp ${c.name}? Học sinh vẫn giữ tài khoản và bài làm.`,{yes:'XÓA',no:'GIỮ',danger:true})){try{await api('/api/classes/'+c.id,undefined,'DELETE');toast('Đã xóa lớp.');}catch(e){toast(e.message,'bad');}go('tHome',{tab:'students'});}}},'XÓA')));}),
+    h('p',{class:'hint'},'Khi soạn bài, cô chọn lớp ở mục GIAO CHO LỚP. Bài không chọn lớp thì giao cho tất cả học sinh.'));
+}
 function tStudents(){
   const F=studentFields(),user=h('input',{class:'inp',type:'text',maxlength:'30',placeholder:'Tên đăng nhập, ví dụ: hoangtho',autocapitalize:'none',spellcheck:'false','aria-label':'Tên đăng nhập'});
   // gợi ý tên đăng nhập không dấu từ họ tên
@@ -2839,7 +2874,8 @@ function tStudents(){
     const cells=SKS.map(k=>{const x=skillStats(k,n);const pub=x.as.filter(a=>a.published).length;time+=x.time;err+=(k==='reading'||k==='listening')?x.err:0;
       return h('td',{},pub?h('span',{class:'tag '+(x.done>=pub?'green':'red')},`${x.done}/${pub}`):'—');});
     const leaves=Object.values(DB.subs).filter(x=>x.student===n).reduce((t,x)=>t+(x.leaves||0),0);
-    return h('tr',{},h('th',{scope:'row'},px(makeAvatar(s.avatar),.5,'sm'),' ',s.name,h('div',{class:'hint'},n),s.parent_phone?h('div',{class:'hint'},'SĐT PH: '+s.parent_phone):h('div',{class:'x hint'},'Chưa có SĐT phụ huynh'),s.mustChange?h('span',{class:'tag amber'},'Chưa đổi MK (đang là 1)'):null),
+    return h('tr',{},h('th',{scope:'row'},px(makeAvatar(s.avatar),.5,'sm'),' ',s.name,h('div',{class:'hint'},n),s.parent_phone?h('div',{class:'hint'},'SĐT PH: '+s.parent_phone):h('div',{class:'x hint'},'Chưa có SĐT phụ huynh'),s.mustChange?h('span',{class:'tag amber'},'Chưa đổi MK (đang là 1)'):null,
+      DB.classes.filter(c=>(s.classes||[]).includes(c.id)).map(c=>h('span',{class:'tag'},c.name))),
       h('td',{},h('span',{class:'tag '+(s.hearts===0?'red':s.hearts<3?'amber':'green')},'♥ '+s.hearts+'/3')),
       cells,h('td',{},fmtT(time)),h('td',{},String(err)),h('td',{},leaves?h('span',{class:'tag amber'},leaves+' lần'):'0'),
       h('td',{class:'acts'},
@@ -2848,7 +2884,7 @@ function tStudents(){
         h('button',{class:'btn btn-sm',onclick:()=>resetPw(s)},'ĐẶT LẠI MK'),
         h('button',{class:'btn btn-sm btn-red',onclick:async()=>{if(await confirmDlg(`Xóa tài khoản ${s.name} và toàn bộ bài làm của em ấy? Không thể hoàn tác.`,{yes:'XÓA',no:'GIỮ',danger:true})){try{await api('/api/students/'+n,undefined,'DELETE');}catch(e){toast(e.message,'bad');}go('tHome',{tab:'students'});}}},'XÓA')));
   });
-  return h('div',{class:'t-content'},alertBox,
+  return h('div',{class:'t-content'},alertBox,tClasses(),
     h('section',{class:'data-box'},h('h3',{class:'pane-h'},'CẤP TÀI KHOẢN MỚI'),
       h('div',{class:'row-btns'},F.el.name,user,F.el.parent_phone),
       h('button',{class:'btn btn-green',onclick:add},'+ TẠO TÀI KHOẢN'),

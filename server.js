@@ -106,11 +106,14 @@ function forStudent(a, sub) {
   return c;
 }
 
+// ===== lớp: bài có chọn lớp chỉ giao cho học sinh thuộc một trong các lớp đó; không chọn lớp = tất cả học sinh =====
+const sees = (user, a) => a.published && (!(a.classes || []).length || a.classes.some(c => (user.classes || []).includes(c)));
+
 // ===== 3 mạng: mỗi bài trễ hạn (nộp sau hạn, hoặc quá hạn mà chưa nộp) mất 1 mạng =====
 function livesOf(user, as, subs) {
   const now = Date.now(), by = Object.fromEntries(subs.filter(s => s.student === user.username).map(s => [s.aid, s]));
   const lates = as.filter(a => {
-    if (!a.published || !a.deadline) return false;
+    if (!sees(user, a) || !a.deadline) return false;
     const s = by[a.id], t = s && s.status === 'submitted' ? s.submittedAt : now;
     return t > a.deadline;
   });
@@ -286,8 +289,8 @@ function serveMem(req, res, token) { // chỉ dùng ở chế độ bộ nhớ, 
   res.end(f.buf.subarray(start, end + 1));
 }
 
-const pubStudent = (s, l) => ({ username: s.username, name: s.name, avatar: s.avatar || null, bonus: s.bonus, parent_phone: s.parent_phone, mustChange: !!s.must_change, zero_at: s.zero_at, notify_status: s.notify_status, hearts: l.hearts, lates: l.lates.length });
-async function visibleA(id) { const a = await db.getA(id); if (!a || !a.published) fail(404, 'Không tìm thấy bài tập'); return a; }
+const pubStudent = (s, l) => ({ username: s.username, name: s.name, classes: s.classes || [], avatar: s.avatar || null, bonus: s.bonus, parent_phone: s.parent_phone, mustChange: !!s.must_change, zero_at: s.zero_at, notify_status: s.notify_status, hearts: l.hearts, lates: l.lates.length });
+async function visibleA(id, user) { const a = await db.getA(id); if (!a || !sees(user, a)) fail(404, 'Không tìm thấy bài tập'); return a; }
 const newSub = (a, u) => ({ key: db.subKey(a.id, u), aid: a.id, skill: a.skill, student: u, status: 'draft', answers: {}, timeSec: 0, attempts: 0, startedAt: Date.now(), leaves: 0, pasted: 0, listens: 0 });
 const cleanEssays = (a, w) => tasksOf(a).map((_, i) => { const html = String((w?.tasks || [])[i]?.html || ''); return { html, words: wordCount(textOf(html)) }; });
 async function draftOf(a, u) { const s = (await db.getS(a.id, u)) || newSub(a, u); if (s.status === 'submitted') fail(409, 'Em đã nộp bài này rồi'); return s; }
@@ -359,22 +362,22 @@ async function studentApi(req, res, M, [r0, r1, r2], user, meInfo) {
   if (M === 'GET' && r0 === 'me') {
     checkLives();
     const [all, subs] = await Promise.all([db.allA(), db.subsWhere('username', u)]);
-    const as = all.filter(a => a.published), by = Object.fromEntries(subs.map(s => [s.aid, s]));
+    const as = all.filter(a => sees(user, a)), ids = new Set(as.map(a => a.id)), by = Object.fromEntries(subs.map(s => [s.aid, s]));
     return send(res, 200, {
       me: meInfo, hearts: livesOf(user, as, subs).hearts, zeroAt: user.zero_at || null,
       assignments: await withUrls(as.map(a => forStudent(a, by[a.id])), mediaOf),
-      subs: await withUrls(subs, recsOf),
+      subs: await withUrls(subs.filter(s => ids.has(s.aid)), recsOf), // bài đã bỏ khỏi lớp của em thì ẩn luôn bài nộp
     });
   }
   if (M === 'POST' && r0 === 'upload') { // xin link để tải file ghi âm Speaking lên kho
-    const b = await json(req), a = await visibleA(b.aid), mime = cleanMime(b.type);
+    const b = await json(req), a = await visibleA(b.aid, user), mime = cleanMime(b.type);
     await draftOf(a, u);
     if (a.skill !== 'speaking' || !(a.questions || []).some(x => x.id === b.qid)) fail(400, 'Câu hỏi không hợp lệ');
     if (!mime.startsWith('audio/')) fail(400, 'Chỉ nhận file ghi âm');
     const path = `rec/${u}/${a.id}/${b.qid}-${rid()}.${extOf(mime)}`;
     return send(res, 200, { path, url: await db.signUpload(path) });
   }
-  const a = r1 && await visibleA(r1);
+  const a = r1 && await visibleA(r1, user);
   if (M === 'POST' && r0 === 'beat') { // đồng hồ do máy chủ giữ: không cộng quá thời gian thực đã trôi qua
     const b = await json(req), s = (await db.getS(a.id, u)) || newSub(a, u);
     if (s.status !== 'submitted') {
@@ -451,9 +454,9 @@ async function teacherApi(req, res, M, seg, user, meInfo) {
   if (M === 'GET' && r0 === 'me') return send(res, 200, { me: meInfo });
   if (M === 'GET' && r0 === 'all') {
     await checkLives();
-    const [as, subs, st] = await Promise.all([db.allA(), db.allSubs(), db.students()]);
+    const [as, subs, st, classes] = await Promise.all([db.allA(), db.allSubs(), db.students(), db.allClasses()]);
     return send(res, 200, {
-      me: meInfo, ai: !!ai,
+      me: meInfo, ai: !!ai, classes,
       assignments: await withUrls(as, mediaOf), subs: await withUrls(subs, recsOf),
       students: st.map(s => pubStudent(s, livesOf(s, as, subs))),
     });
@@ -476,6 +479,8 @@ async function teacherApi(req, res, M, seg, user, meInfo) {
     const a = await json(req); delete a._urls;
     if (!/^[\w-]{4,40}$/.test(a.id || '')) fail(400, 'Mã bài không hợp lệ');
     if (a.skill === 'speaking' && Array.isArray(a.questions)) a.questions.sort((x, y) => (+x.part || 1) - (+y.part || 1));
+    const cids = new Set((await db.allClasses()).map(c => c.id));
+    a.classes = (Array.isArray(a.classes) ? a.classes : []).filter(c => cids.has(c));
     const old = await db.getA(a.id);
     a.published = !!old?.published; a.publishedAt = old?.publishedAt;
     const p = problems(a);
@@ -514,6 +519,25 @@ async function teacherApi(req, res, M, seg, user, meInfo) {
       return send(res, 200, { ok: true });
     }
     if (M === 'DELETE') { await db.delS(s.key); await db.removeFiles(recsOf(s)); return send(res, 200, { ok: true }); }
+  }
+  if (r0 === 'classes') {
+    const nameOf = async () => { const n = String((await json(req)).name || '').trim().slice(0, 40); if (!n) fail(400, 'Hãy nhập tên lớp'); return n; };
+    const setIn = (s, on) => db.updateUser(s.username, { classes: (s.classes || []).filter(x => x !== r1).concat(on ? [r1] : []) });
+    if (M === 'POST' && !r1) { const c = { id: rid(), name: await nameOf(), created: Date.now() }; await db.putClass(c); return send(res, 200, c); }
+    const c = (await db.allClasses()).find(x => x.id === r1);
+    if (!c) fail(404, 'Không tìm thấy lớp');
+    if (M === 'PATCH' && !r2) { c.name = await nameOf(); await db.putClass(c); return send(res, 200, { ok: true }); }
+    if (M === 'PUT' && r2 === 'members') { // cô tích chọn học sinh từ danh sách: gửi cả danh sách thành viên của lớp
+      const want = new Set((await json(req)).usernames || []);
+      for (const s of await db.students()) if ((s.classes || []).includes(r1) !== want.has(s.username)) await setIn(s, want.has(s.username));
+      return send(res, 200, { ok: true });
+    }
+    if (M === 'DELETE' && !r2) { // không cho xóa lớp còn bài: bài đó sẽ thành giao cho tất cả học sinh
+      const used = (await db.allA()).filter(a => (a.classes || []).includes(r1));
+      if (used.length) fail(409, `Lớp này còn ${used.length} bài (${used.map(a => a.title).join(', ')}). Hãy bỏ chọn lớp trong các bài đó trước.`);
+      for (const s of await db.students()) if ((s.classes || []).includes(r1)) await setIn(s, false);
+      await db.delClass(r1); return send(res, 200, { ok: true });
+    }
   }
   if (r0 === 'students') {
     if (M === 'POST' && !r1) {

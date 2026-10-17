@@ -13,7 +13,7 @@ const must = ({ data, error }) => { if (error) throw new Error('Supabase: ' + er
 const row = r => (r ? r.data : null);
 
 // ---------- bộ nhớ tạm ----------
-const M = { users: new Map(), sessions: new Map(), assignments: new Map(), subs: new Map(), files: new Map(), tokens: new Map() };
+const M = { users: new Map(), sessions: new Map(), assignments: new Map(), subs: new Map(), classes: new Map(), files: new Map(), tokens: new Map() };
 const clone = v => (v == null ? v : structuredClone(v));
 
 // ---------- người dùng ----------
@@ -77,6 +77,20 @@ export async function putA(a) {
 export async function delA(id) { // bài nộp tự xóa theo (on delete cascade)
   if (!sb) { M.assignments.delete(id); for (const [k, s] of M.subs) if (s.aid === id) M.subs.delete(k); return; }
   must(await sb.from('assignments').delete().eq('id', id));
+}
+
+// ---------- lớp ----------
+export async function allClasses() {
+  if (!sb) return [...M.classes.values()].map(clone);
+  return must(await sb.from('classes').select('*').order('created'));
+}
+export async function putClass(c) {
+  if (!sb) { M.classes.set(c.id, clone(c)); return; }
+  must(await sb.from('classes').upsert(c));
+}
+export async function delClass(id) {
+  if (!sb) { M.classes.delete(id); return; }
+  must(await sb.from('classes').delete().eq('id', id));
 }
 
 // ---------- bài nộp ----------

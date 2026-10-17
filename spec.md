@@ -12,7 +12,7 @@ Web luyện IELTS 4 kỹ năng **Nghe / Nói / Đọc / Viết**, giao diện ki
 - Học sinh đi đường qua các bài giáo viên giao để tới **ĐÍCH**.
 - Học sinh làm bài **trên máy riêng**. Dữ liệu đồng bộ qua máy chủ.
 - Học sinh chọn làm bài nào trước cũng được, nhưng phải xong **tất cả** mới về đích.
-- Hiện tại có **1 lớp IELTS**. Sau này có thể thêm nhiều lớp (mục 10).
+- Chia được **nhiều lớp**, giao bài theo lớp (mục 8).
 
 ---
 
@@ -145,6 +145,7 @@ Mỗi bài gồm nhiều **nhóm câu** giống đề thật:
 - Giáo viên soạn bài ở dạng **BẢN NHÁP**, rồi bấm **GIAO BÀI <KỸ NĂNG>** ở tab của kỹ năng đó.
 - **Giao theo từng kỹ năng:** chỉ cần các bài nháp của kỹ năng đó đầy đủ (tên, hạn nộp, nội dung, đáp án...) là giao được, không phải chờ các kỹ năng khác. Thiếu gì thì hiện bảng **KIỂM TRA LẠI**.
 - Bài đã giao khi sửa vẫn phải đầy đủ mới lưu được.
+- **Lớp:** ở tab HỌC SINH cô tạo lớp, bấm **HỌC SINH** của lớp để tích chọn các em từ danh sách (một em có thể ở nhiều lớp). Khi soạn bài, cô tích lớp ở mục **GIAO CHO LỚP**; không chọn lớp nào thì bài giao cho tất cả học sinh. Bài chỉ hiện, chỉ tính mạng và chỉ đếm "đã nộp" với học sinh trong lớp được giao. Lớp còn bài thì không xóa được.
 - Học sinh **về đích** khi làm xong hết bài của các kỹ năng đã được giao (kỹ năng chưa có bài không chặn).
 
 ---
@@ -155,7 +156,7 @@ Mỗi bài gồm nhiều **nhóm câu** giống đề thật:
 Trình duyệt ──► Netlify (public/index.html)
                   │  /api/*  (proxy, cùng tên miền → cookie đăng nhập an toàn)
                   ▼
-               Render (server.js, Node) ──► Supabase Postgres (bảng users, sessions, assignments, subs)
+               Render (server.js, Node) ──► Supabase Postgres (bảng users, sessions, classes, assignments, subs)
                   │                    └─► OpenRouter (AI đọc đề, chấm Writing)
                   └─ cấp link ký tạm ──► Supabase Storage (bucket riêng tư "media": audio, ảnh, ghi âm)
 Trình duyệt tải / nghe file trực tiếp với Supabase Storage bằng link ký tạm (file lớn không đi qua Render).
@@ -203,10 +204,9 @@ Trình duyệt tải / nghe file trực tiếp với Supabase Storage bằng lin
 
 ## 10. Còn mở / làm sau
 
-1. **Nhiều lớp:** thêm bảng `classes` và cột lớp cho học sinh và bài tập. Hiện tại mọi bài giao cho cả lớp.
-2. Báo phụ huynh: cô gọi điện theo SĐT hiện trong tab HỌC SINH (chưa tự gửi tin nhắn).
-3. Chưa thử trên mọi thiết bị, đặc biệt là ghi âm trên Safari iPhone/iPad.
-4. Chưa có nút sao lưu trên web. Supabase tự sao lưu hằng ngày ở gói Pro; gói Free nên tự xuất dữ liệu định kỳ.
+1. Báo phụ huynh: cô gọi điện theo SĐT hiện trong tab HỌC SINH (chưa tự gửi tin nhắn).
+2. Chưa thử trên mọi thiết bị, đặc biệt là ghi âm trên Safari iPhone/iPad.
+3. Chưa có nút sao lưu trên web. Supabase tự sao lưu hằng ngày ở gói Pro; gói Free nên tự xuất dữ liệu định kỳ.
 
 ---
 
