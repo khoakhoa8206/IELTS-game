@@ -24,6 +24,10 @@ const AI_TEST = {
 const fake = http.createServer((req, res) => {
   let b = ''; req.on('data', d => { b += d; }).on('end', () => {
     const body = JSON.parse(b); seen.push(body);
+    if (body.model === 'gone/old-model') { // model đã bị OpenRouter gỡ
+      res.writeHead(404, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ error: { message: 'gone/old-model is no longer available on OpenRouter: no provider serves this model anymore.' } }));
+    }
     if (body.model.endsWith(':free') && body.response_format.type === 'json_schema') { // giả nhà cung cấp chỉ nhận json_object (như Novita)
       res.writeHead(400, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({ error: { message: 'Provider returned error', metadata: { raw: JSON.stringify({ message: "does not support 'json_schema' response format. Supported formats: json_object." }) } } }));
@@ -40,7 +44,7 @@ const fake = http.createServer((req, res) => {
 let srv;
 before(async () => {
   await new Promise(r => fake.listen(0, r));
-  const env = { ...process.env, PORT: String(PORT), TEACHER_USER: 'co', TEACHER_PASSWORD: 'secret123', OPENROUTER_API_KEY: 'test', OPENROUTER_WRITING_MODEL: 'apodex/apodex-1.1-mini:free', OPENROUTER_PDF_ENGINE: 'cloudflare-ai', OPENROUTER_BASE_URL: `http://localhost:${fake.address().port}` };
+  const env = { ...process.env, PORT: String(PORT), TEACHER_USER: 'co', TEACHER_PASSWORD: 'secret123', OPENROUTER_API_KEY: 'test', OPENROUTER_MODEL: 'gone/old-model', OPENROUTER_WRITING_MODEL: 'apodex/apodex-1.1-mini:free', OPENROUTER_PDF_ENGINE: 'cloudflare-ai', OPENROUTER_BASE_URL: `http://localhost:${fake.address().port}` };
   for (const k of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RESEND_API_KEY', 'MAIL_FROM']) delete env[k];
   srv = spawn(process.execPath, ['server.js'], { env, stdio: 'pipe' });
   await new Promise((res, rej) => { srv.stdout.on('data', d => /đang chạy/.test(d) && res()); srv.on('exit', rej); });
@@ -241,7 +245,7 @@ test('AI đọc đề (OpenRouter giả)', async () => {
   assert.equal(r.total, 6);
   assert.ok(r.warnings.some(w => w.includes('___')) && r.warnings.some(w => w.includes('chưa có đáp án')));
   // gửi PDF đúng dạng file của OpenRouter, không gửi file ngoài thư mục đề
-  const req = seen.find(b => b.response_format.type === 'json_schema' && b.response_format.json_schema.schema.properties.passages);
+  const req = seen.findLast(b => b.response_format.type === 'json_schema' && b.response_format.json_schema.schema.properties.passages);
   const files = req.messages[1].content.filter(c => c.type === 'file');
   assert.equal(files.length, 2); assert.match(files[0].file.file_data, /^data:application\/pdf;base64,/);
   // đáp án nằm sau dòng đánh dấu riêng, đề nằm trước
@@ -250,6 +254,8 @@ test('AI đọc đề (OpenRouter giả)', async () => {
   assert.match(parts[keyAt].text, /1 C/);
   assert.equal(req.provider.require_parameters, true);
   assert.deepEqual(req.plugins, [{ id: 'file-parser', pdf: { engine: 'cloudflare-ai' } }]); // chuyển PDF → chữ miễn phí
+  // model trong .env đã bị gỡ khỏi OpenRouter → tự dùng openrouter/free thay vì báo lỗi 404
+  assert.ok(seen.some(b => b.model === 'gone/old-model')); assert.equal(req.model, 'openrouter/free');
   // học sinh không dùng được
   const H = client();
   assert.equal((await H('/api/ai/parse', { skill: 'reading' })).status, 401);
@@ -287,4 +293,24 @@ test('chia lớp: bài chọn lớp chỉ học sinh trong lớp thấy', async 
   await T('/api/assignment/' + S.id, undefined, 'DELETE');
   assert.equal((await T('/api/classes/' + c.id, undefined, 'DELETE')).status, 200);
   assert.deepEqual((await T('/api/all')).data.students.find(s => s.username === 'lopa1').classes, []);
+});
+
+test('dictation điền từ + tắt AI chấm Writing', async () => {
+  const T = client(), H = client();
+  await T('/api/login', { username: 'co', password: 'secret123' });
+  await T('/api/students', { name: 'Dw', username: 'dw1' });
+  const audio = await upload(T, {}, new Uint8Array(10).fill(7), 'audio/mpeg'), deadline = Date.now() + 864e5;
+  // giống dictWordsGroup ở giao diện: "[nine | 9]" → ___ với đáp án "nine | 9"
+  const DW = { id: 'dict-w', skill: 'listening', title: 'DW', deadline, mode: 'dictwords', audio, transcript: 'Opens at [nine | 9].\nBring your [card].',
+    groups: [{ id: 'g', preset: 'dictwords', type: 'gap', maxWords: 0, bank: [], html: '<p>Opens at ___.</p><p>Bring your ___.</p>', items: [{ id: 'w1', answer: 'nine | 9' }, { id: 'w2', answer: 'card' }] }] };
+  const WN = { id: 'writ-n', skill: 'writing', title: 'WN', deadline, aiGrade: false, tasks: [{ no: 2, prompt: '<p>Discuss</p>', minWords: 250, images: [] }] };
+  for (const a of [DW, WN]) assert.equal((await T('/api/assignment', a, 'PUT')).status, 200);
+  for (const k of ['listening', 'writing']) { const p = await T('/api/publish', { skill: k }); assert.equal(p.status, 200, JSON.stringify(p.data)); }
+  await H('/api/login', { username: 'dw1', password: '1' }); await H('/api/password', { new: 'meomeo' });
+  const dw = (await H('/api/me')).data.assignments.find(a => a.id === 'dict-w');
+  assert.equal(dw.transcript, undefined); assert.ok(dw.groups[0].items.every(it => !('answer' in it))); // không lộ đáp án
+  const r = (await H('/api/submit/dict-w', { answers: { w1: '9', w2: 'bag' } })).data.sub.result;
+  assert.equal(r.score, 1); assert.equal(r.total, 2);
+  const n = seen.length, w = (await H('/api/submit/writ-n', { writing: { tasks: [{ html: '<p>My essay</p>' }] } })).data;
+  assert.equal(w.sub.aiStatus, 'off'); await sleep(200); assert.equal(seen.length, n); // không gọi AI
 });

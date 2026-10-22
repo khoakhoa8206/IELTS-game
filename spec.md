@@ -50,21 +50,22 @@ Mỗi bài gồm nhiều **nhóm câu** giống đề thật:
 
 | Dạng bài | Reading | Listening | Cách học sinh làm |
 |---|:-:|:-:|---|
-| Multiple Choice (1 đáp án) | ✔ | ✔ | bấm A/B/C/D |
-| Multiple Choice (chọn 2–3 đáp án) | ✔ | ✔ | bấm đủ số đáp án |
+| Multiple Choice (One Answer) | ✔ | ✔ | bấm A/B/C/D |
+| Multiple Choice (Many Answers) | ✔ | ✔ | bấm đủ số đáp án |
 | True / False / Not Given | ✔ | | bấm |
 | Yes / No / Not Given | ✔ | | bấm |
 | Matching Headings | ✔ | | chọn i, ii, iii… theo danh sách |
-| Matching Information | ✔ | | chọn đoạn A, B, C… |
+| Matching Information | ✔ | ✔ | chọn đoạn A, B, C… |
 | Matching Features | ✔ | ✔ | chọn A, B, C… theo danh sách |
 | Matching Sentence Endings | ✔ | | chọn A–G |
-| Plan / Map / Diagram Labelling | | ✔ | xem ảnh, chọn nhãn A–H |
-| Form / Note / Table / Flow-chart / Summary Completion | ✔ | ✔ | gõ vào ô trống nằm ngay trong đoạn văn / bảng |
+| Map | | ✔ | xem ảnh, chọn nhãn A–H |
+| Gap Filling (form / note / table / flow-chart) | ✔ | ✔ | gõ vào ô trống nằm ngay trong đoạn văn / bảng |
 | Sentence Completion | ✔ | ✔ | gõ vào ô trống |
 | Summary Completion (chọn từ trong khung) | ✔ | ✔ | chọn chữ cái của từ trong khung |
-| Diagram Label Completion | ✔ | ✔ | xem ảnh, gõ vào ô trống |
-| Short-answer Questions | ✔ | ✔ | gõ câu trả lời |
-| Dictation (chép chính tả) | | ✔ | gõ lại từng câu, so từng từ |
+| Diagram Label | ✔ | ✔ | xem ảnh, gõ vào ô trống |
+| Short Answer | ✔ | ✔ | gõ câu trả lời |
+| Dictation · chép full | | ✔ | gõ lại cả câu, so từng từ |
+| Dictation · điền từ | | ✔ | thấy cả đoạn, chỉ gõ các từ cô đặt trong `[ ]` (vd. `opens at [nine | 9]`) |
 
 **Soạn dạng điền từ:**
 - Giáo viên gõ **`___`** (3 dấu gạch dưới) vào đúng chỗ cần điền trong đoạn văn hoặc bảng (dán bảng từ Word được).
@@ -74,7 +75,7 @@ Mỗi bài gồm nhiều **nhóm câu** giống đề thật:
 
 **Reading** có tối đa **3 passage**, học sinh bấm thẻ PASSAGE 1/2/3 để chuyển. **Listening** chia **PART 1–4**, dùng một file mp3.
 
-**Soạn bài Reading / Listening:** cô chỉ nhập **tên bài + hạn nộp** (Listening thêm file mp3). Đề bài, passage / section và dạng câu hỏi do **AI tự nhận diện và dựng đúng format đề thi**; cô không cần tự thêm passage hay câu hỏi, chỉ **kiểm tra, sửa hoặc xóa** chỗ sai trước khi giao. Listening chia theo **Section** đúng như đề (3 hoặc 4 section).
+**Soạn bài Reading / Listening:** mục **Cách soạn đề** cho cô chọn **🤖 DÙNG AI ĐỌC ĐỀ** hoặc **✍ TỰ SOẠN TAY** (web nhớ lựa chọn trên máy). Tự soạn: thêm passage (tối đa 3), chọn dạng câu hỏi IELTS rồi bấm **+ THÊM NHÓM CÂU**, **+ THÊM CÂU**. Dùng AI: AI tự nhận diện passage / section, dạng câu hỏi và dựng đúng format đề thi, cô **kiểm tra, sửa hoặc xóa** chỗ sai trước khi giao. Listening chia theo **Section** đúng như đề (3 hoặc 4 section).
 
 **🤖 Nhập đề bằng AI (OpenRouter):**
 1. Ở màn hình soạn bài Reading/Listening, khung AI có 2 ô riêng: **① ĐỀ BÀI** và **② ĐÁP ÁN**. Mỗi ô nhận file PDF, ảnh chụp, hoặc chữ dán. AI ghép đáp án vào câu hỏi theo số câu (hiểu cả viết tắt T/F/NG, nhiều đáp án như "six / 6").
@@ -100,6 +101,7 @@ Mỗi bài gồm nhiều **nhóm câu** giống đề thật:
 **Writing** (2 task như đề thật)
 - Cô soạn **Task 1** (đề + biểu đồ/hình, mặc định 150 từ) và **Task 2** (bài luận, không cần hình, mặc định 250 từ). Muốn giao 1 task thì để trống task còn lại.
 - Học sinh bấm thẻ **TASK 1 / TASK 2** để chuyển, mỗi task một khung viết và bộ đếm từ riêng; gõ hoặc dán bài.
+- Ô **🤖 AI tự chấm khi học sinh nộp** (mặc định bật). Bỏ tích thì cô tự chấm.
 - **AI chấm từng task** (band + nhận xét tiếng Việt + sửa lỗi trên bài). **Band tổng** = (Task 1 + Task 2 × 2) / 3, làm tròn 0.5 như IELTS. Cô sửa band từng task, band tổng tự tính lại.
 
 **Speaking** (phòng thi có giám thị)

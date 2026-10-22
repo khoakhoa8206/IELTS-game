@@ -10,6 +10,8 @@ export const MODEL_WRITING = process.env.OPENROUTER_WRITING_MODEL || 'google/gem
 // tự chọn (model đọc được PDF thì đọc thẳng, không thì dùng OCR 'mistral-ocr' tính phí ~2 USD/1000 trang)
 const PDF_ENGINE = process.env.OPENROUTER_PDF_ENGINE || '';
 const isImageErr = e => /image|modalit|vision/i.test(e.message);
+// model bị OpenRouter gỡ (hay gặp với bản :free) → tự chuyển sang bộ định tuyến model miễn phí còn chạy của OpenRouter
+const FALLBACK_MODEL = 'openrouter/free';
 
 // nhiều model (nhất là bản :free) chỉ nhận json_object, không nhận json_schema → nhớ lại để lần sau gửi thẳng kiểu đó
 const jsonObjectOnly = new Set();
@@ -31,6 +33,10 @@ async function call({ model, system, content, schema, maxTokens }) {
     let why = d.error?.message || 'lỗi không rõ';
     try { why = JSON.parse(d.error.metadata.raw).message || why; } catch { /* không có chi tiết từ nhà cung cấp */ }
     if (!loose && /json_schema|response.?format|structured/i.test(why)) { jsonObjectOnly.add(model); return call({ model, system, content, schema, maxTokens }); }
+    if (r.status === 404 && model !== FALLBACK_MODEL && /no longer available|not a valid model|does not exist/i.test(why)) {
+      console.error(`Model ${model} không còn trên OpenRouter, dùng tạm ${FALLBACK_MODEL}. Hãy đổi OPENROUTER_MODEL / OPENROUTER_WRITING_MODEL.`);
+      return call({ model: FALLBACK_MODEL, system, content, schema, maxTokens });
+    }
     throw new Error(`OpenRouter ${r.status}: ${why}`);
   }
   const ch = d.choices?.[0];

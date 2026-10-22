@@ -1321,22 +1321,45 @@ const SKS=['reading','listening','writing','speaking'];
 const MAX_LISTENS=2;
 const ROMAN=['i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii','xiii','xiv','xv'];
 const lab=(g,k)=>g.labels==='roman'?ROMAN[k]||String(k+1):LETTERS[k];
+// tên dạng câu hỏi theo đúng cách gọi của đề IELTS
 const PRESETS=[
-  {id:'mcq',name:'Multiple Choice (1 đáp án)',type:'mcq',skills:'rl',ins:'Choose the correct letter, A, B, C or D.'},
-  {id:'multi',name:'Multiple Choice (chọn nhiều đáp án)',type:'multi',skills:'rl',ins:'Choose TWO letters, A–E.'},
+  {id:'mcq',name:'Multiple Choice (One Answer)',type:'mcq',skills:'rl',ins:'Choose the correct letter, A, B, C or D.'},
+  {id:'multi',name:'Multiple Choice (Many Answers)',type:'multi',skills:'rl',ins:'Choose TWO letters, A–E.'},
   {id:'tfng',name:'True / False / Not Given',type:'tfng',skills:'r',ins:'Do the following statements agree with the information given in the passage?\nWrite TRUE if the statement agrees with the information, FALSE if the statement contradicts the information, NOT GIVEN if there is no information on this.'},
   {id:'ynng',name:'Yes / No / Not Given',type:'ynng',skills:'r',ins:'Do the following statements agree with the claims of the writer?\nWrite YES if the statement agrees with the claims of the writer, NO if the statement contradicts the claims of the writer, NOT GIVEN if it is impossible to say what the writer thinks about this.'},
   {id:'headings',name:'Matching Headings',type:'match',skills:'r',labels:'roman',title:'List of Headings',ins:'Choose the correct heading for each paragraph from the list of headings below.'},
-  {id:'info',name:'Matching Information',type:'match',skills:'r',title:'',ins:'Which paragraph contains the following information?\nYou may use any letter more than once.',count:6},
+  {id:'info',name:'Matching Information',type:'match',skills:'rl',title:'',ins:'Which paragraph contains the following information?\nYou may use any letter more than once.'},
   {id:'features',name:'Matching Features',type:'match',skills:'rl',title:'List of People',ins:'Look at the following statements and the list below. Match each statement with the correct option.\nYou may use any letter more than once.'},
   {id:'endings',name:'Matching Sentence Endings',type:'match',skills:'r',title:'',ins:'Complete each sentence with the correct ending, A–G, below.'},
-  {id:'map',name:'Plan / Map / Diagram Labelling',type:'match',skills:'l',image:true,ins:'Label the map below.\nWrite the correct letter, A–H, next to the questions.',count:8},
-  {id:'notes',name:'Form / Note / Table / Flow-chart / Summary Completion',type:'gap',skills:'rl',ins:'Complete the notes below.\nWrite NO MORE THAN TWO WORDS AND/OR A NUMBER for each answer.',maxWords:2},
+  {id:'map',name:'Map',type:'match',skills:'l',image:true,ins:'Label the map below.\nWrite the correct letter, A–H, next to the questions.',count:8},
+  {id:'notes',name:'Gap Filling',type:'gap',skills:'rl',ins:'Complete the notes below.\nWrite NO MORE THAN TWO WORDS AND/OR A NUMBER for each answer.',maxWords:2},
   {id:'sentence',name:'Sentence Completion',type:'gap',skills:'rl',ins:'Complete the sentences below.\nWrite NO MORE THAN TWO WORDS for each answer.',maxWords:2},
-  {id:'bank',name:'Summary Completion (chọn từ trong khung)',type:'gap',skills:'rl',bank:true,ins:'Complete the summary using the list of words, A–I, below.'},
-  {id:'diagram',name:'Diagram Label Completion',type:'gap',skills:'rl',image:true,ins:'Label the diagram below.\nWrite NO MORE THAN TWO WORDS for each answer.',maxWords:2},
-  {id:'short',name:'Short-answer Questions',type:'gap',skills:'rl',ins:'Answer the questions below.\nWrite NO MORE THAN THREE WORDS AND/OR A NUMBER for each answer.',maxWords:3},
+  {id:'bank',name:'Summary Completion',type:'gap',skills:'rl',bank:true,ins:'Complete the summary using the list of words, A–I, below.'},
+  {id:'diagram',name:'Diagram Label',type:'gap',skills:'rl',image:true,ins:'Label the diagram below.\nWrite NO MORE THAN TWO WORDS for each answer.',maxWords:2},
+  {id:'short',name:'Short Answer',type:'gap',skills:'rl',ins:'Answer the questions below.\nWrite NO MORE THAN THREE WORDS AND/OR A NUMBER for each answer.',maxWords:3},
 ];
+// nhóm câu / câu mới khi cô tự soạn (không dùng AI)
+function newItem(g){
+  const it={id:uid(),text:'',answer:null};
+  if(g.type==='mcq')it.options=['','','',''];
+  if(g.type==='multi'){it.options=['','','','',''];it.choose=2;it.answer=[];}
+  return it;
+}
+function newGroup(p,section){
+  const g={id:uid(),preset:p.id,type:p.type,instructions:p.ins,section,items:[]};
+  if(p.image)g.image='';
+  if(p.type==='match'){g.labels=p.labels||'letter';g.title=p.title||'';g.options=Array(p.count||0).fill('');}
+  if(p.type==='gap'){g.html='';g.maxWords=p.maxWords||0;g.bank=p.bank?['']:[];}
+  else g.items.push(newItem(g));
+  return g;
+}
+// Dictation điền từ: cô đặt từ cần nghe trong [ ], mỗi từ thành một ô trống (chấm như Gap Filling)
+function dictWordsGroup(text,old){
+  const ans=[],ids=((old||{}).items||[]).map(it=>it.id);
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const html=String(text).split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(l=>'<p>'+esc(l).replace(/\[([^\]]+)\]/g,(_,w)=>{ans.push(w.trim());return '___';})+'</p>').join('');
+  return {id:(old||{}).id||uid(),preset:'dictwords',type:'gap',instructions:'Listen and write the missing words.',html,maxWords:0,bank:[],items:ans.map((w,i)=>({id:ids[i]||uid(),answer:w}))};
+}
 const marksOf=(g,it)=>g.type==='multi'?(it.choose||2):1;
 // số câu của từng nhóm: multi "Choose TWO" chiếm 2 số câu, như đề thật
 function numberGroups(groups){
@@ -1356,7 +1379,8 @@ function correctText(g,it){
   return String(it.answer);
 }
 function badgeOf(a){
-  if(a.skill==='listening'&&a.mode==='dictation')return 'DICTATION';
+  if(a.skill==='listening'&&a.mode==='dictation')return 'DICTATION · CHÉP FULL';
+  if(a.skill==='listening'&&a.mode==='dictwords')return 'DICTATION · ĐIỀN TỪ';
   if(a.skill==='reading'||a.skill==='listening'){
     const ps=[...new Set((a.groups||[]).map(g=>g.preset))];
     const nm=ps.length===1&&(PRESETS.find(p=>p.id===ps[0])||{}).name;
@@ -2392,7 +2416,7 @@ function tSkillList(skill){
     cards.length?cards:h('p',{class:'empty'},'Chưa có bài nào. Bấm TẠO BÀI MỚI để bắt đầu.'));
 }
 
-// ----- sửa đề AI đã dựng: chữ, phương án, đáp án, hình; xóa chỗ AI làm sai. Đề và dạng câu hỏi do AI nhận diện -----
+// ----- soạn / sửa nhóm câu: cô tự thêm theo dạng IELTS, hoặc sửa đề AI đã dựng -----
 function GroupBuilder(a,skill){
   a.groups=a.groups||[];
   const gs=a.groups,el=h('div',{class:'qb'}),list=h('div',{class:'qb-list'});
@@ -2442,7 +2466,7 @@ function GroupBuilder(a,skill){
       h('p',{class:'hint'},multi?`Tích ${it.choose||2} ô bên cạnh các đáp án đúng.`:'Chọn nút tròn bên cạnh đáp án đúng.')));
     }else if(g.type==='tfng'||g.type==='ynng'){
       const vals=g.type==='tfng'?['TRUE','FALSE','NOT GIVEN']:['YES','NO','NOT GIVEN'];
-      body.push(h('label',{class:'inline'},'Đáp án đúng: ',h('select',{class:'sel',onchange:e=>{it.answer=e.target.value;}},vals.map(v=>h('option',{value:v,selected:v===it.answer},v)))));
+      body.push(h('label',{class:'inline'},'Đáp án đúng: ',h('select',{class:'sel',onchange:e=>{it.answer=e.target.value||null;}},h('option',{value:''},'— chọn —'),vals.map(v=>h('option',{value:v,selected:v===it.answer},v)))));
     }else if(g.type==='match'){
       body.push(h('label',{class:'inline'},'Đáp án đúng: ',h('select',{class:'sel',onchange:e=>{it.answer=e.target.value===''?null:+e.target.value;}},
         h('option',{value:''},'— chọn —'),(g.options||[]).map((o,k)=>h('option',{value:k,selected:it.answer===k},lab(g,k)+(o?'. '+o.slice(0,50):''))))));
@@ -2450,7 +2474,7 @@ function GroupBuilder(a,skill){
     return h('div',{class:'qrow'},head,body);
   }
   function itemsEditor(g,N){
-    return [h('div',{},g.items.map((it,i)=>itemRow(g,it,i,N.nums[it.id])))];
+    return [h('div',{},g.items.map((it,i)=>itemRow(g,it,i,N.nums[it.id]))),h('button',{class:'btn btn-sm btn-blue',onclick:()=>{g.items.push(newItem(g));draw();}},'+ THÊM CÂU')];
   }
   function gapEditor(g,N){
     const answers=h('div',{});
@@ -2484,7 +2508,7 @@ function GroupBuilder(a,skill){
     list.replaceChildren(...gs.map((g,i)=>{
       const N=nums[i],p=PRESETS.find(x=>x.id===g.preset)||{name:g.type};
       const chip=h('span',{class:'chip alt'});heads.push(chip);
-      const secs=skill==='reading'?passagesOf(a).map((_,k)=>[k+1,'Passage '+(k+1)]):Array.from({length:Math.max(3,...gs.map(x=>x.section||1))},(_,k)=>[k+1,'Section '+(k+1)]);
+      const secs=skill==='reading'?passagesOf(a).map((_,k)=>[k+1,'Passage '+(k+1)]):Array.from({length:Math.max(4,...gs.map(x=>x.section||1))},(_,k)=>[k+1,'Section '+(k+1)]);
       const secSel=h('select',{class:'sel','aria-label':'Thuộc phần nào',onchange:e=>{g.section=+e.target.value;gs.sort((x,y)=>(x.section||1)-(y.section||1));draw();}},secs.map(([v,l])=>h('option',{value:v,selected:(g.section||1)===v},l)));
       const head=h('div',{class:'qrow-h'},chip,secSel,h('b',{class:'grp-name'},p.name),h('span',{class:'qrow-a'},mv(gs,i),
         h('button',{class:'btn btn-sm btn-red',onclick:async()=>{if(await confirmDlg('Xóa cả nhóm câu này?',{yes:'XÓA',no:'HỦY',danger:true})){gs.splice(i,1);draw();}}},'XÓA NHÓM')));
@@ -2495,19 +2519,20 @@ function GroupBuilder(a,skill){
       return h('div',{class:'grp-edit'},head,body);
     }));
     refreshNums();
-    if(!gs.length)list.append(h('p',{class:'empty'},'Chưa có câu hỏi.'));
+    if(!gs.length)list.append(h('p',{class:'empty'},'Chưa có câu hỏi. Chọn dạng câu hỏi bên dưới rồi bấm THÊM NHÓM CÂU.'));
   }
-  el.append(list);
+  const pick=h('select',{class:'sel','aria-label':'Dạng câu hỏi'},PRESETS.filter(p=>p.skills.includes(skill[0])).map(p=>h('option',{value:p.id},p.name)));
+  const add=h('button',{class:'btn btn-blue btn-sm',onclick:()=>{gs.push(newGroup(PRESETS.find(p=>p.id===pick.value),gs.length?gs[gs.length-1].section||1:1));draw();}},'+ THÊM NHÓM CÂU');
+  el.append(list,h('div',{class:'row-btns'},pick,add));
   draw();
   return {el,redraw:draw};
 }
 
 // ----- form riêng từng kỹ năng -----
 const hasTest=a=>(a.groups||[]).length>0;
-const noTestYet=skill=>h('div',{class:'data-box'},h('p',{},`Chưa có đề. Cô dùng khung 🤖 NHẬP ĐỀ BẰNG AI ở trên: tải đề + đáp án, AI sẽ tự nhận diện ${skill==='reading'?'passage':'section'}, dạng câu hỏi và dựng đúng format đề thi. Xong cô kiểm tra, sửa lại ở đây rồi mới giao.`));
+const EDIT_HINT='Cô tự thêm nhóm câu theo dạng IELTS ở cuối phần Câu hỏi, hoặc dùng AI đọc đề rồi sửa lại chỗ sai. Bấm XEM TRƯỚC + ĐÁP ÁN để kiểm tra lần cuối trước khi giao.';
 function readingForm(a){
   a.passages=passagesOf(a).slice();delete a.passage;
-  if(!hasTest(a))return {el:[noTestYet('reading')],collect:()=>'Hãy dùng AI đọc đề trước (khung 🤖 ở trên).'};
   const gb=GroupBuilder(a,'reading'),box=h('div');let eds=[];
   // bài nhỏ: cô xóa bớt passage, nhóm câu của passage đó cũng bị xóa theo
   async function drop(i){
@@ -2519,12 +2544,13 @@ function readingForm(a){
   }
   function drawPs(){
     eds=a.passages.map((html,i)=>RichEditor({html,minHeight:220,label:'Passage '+(i+1),onInput:()=>{a.passages[i]=eds[i].get();}}));
-    box.replaceChildren(...eds.map((ed,i)=>field('PASSAGE '+(i+1),h('div',{},ed.el,a.passages.length>1?h('button',{class:'btn btn-sm btn-red',onclick:()=>drop(i)},'XÓA PASSAGE '+(i+1)):null))));
+    box.replaceChildren(...eds.map((ed,i)=>field('PASSAGE '+(i+1),h('div',{},ed.el,a.passages.length>1?h('button',{class:'btn btn-sm btn-red',onclick:()=>drop(i)},'XÓA PASSAGE '+(i+1)):null))),
+      a.passages.length<3?h('button',{class:'btn btn-sm btn-blue',onclick:()=>{a.passages=eds.map(e=>e.get());a.passages.push('');drawPs();gb.redraw();}},'+ THÊM PASSAGE'):null);
   }
   drawPs();
-  return {el:[h('h3',{class:'pane-h'},'KIỂM TRA & SỬA ĐỀ'),h('p',{class:'hint'},'AI đã dựng đề theo đúng format. Cô đọc lại, sửa chỗ sai (chữ, phương án, đáp án) rồi bấm XEM TRƯỚC + ĐÁP ÁN để kiểm tra lần cuối. Muốn giao bài nhỏ thì xóa bớt passage, chỉ giữ 1 passage cũng được.'),
+  return {el:[h('h3',{class:'pane-h'},'SOẠN & KIỂM TRA ĐỀ'),h('p',{class:'hint'},EDIT_HINT+' Muốn giao bài nhỏ thì chỉ giữ 1 passage cũng được.'),
       box,field('Câu hỏi',gb.el)],
-    collect(){a.passages=eds.map(e=>e.get());if(!a.passages.some(x=>htmlText(x)||/<img/.test(x)))return 'Bài đọc đang trống.';return null;}};
+    collect(){a.passages=eds.map(e=>e.get());if(!a.passages.some(x=>htmlText(x)||/<img/.test(x)))return 'Bài đọc đang trống.';return hasTest(a)?null:'Chưa có câu hỏi nào.';}};
 }
 function listeningForm(a){
   let mode=a.mode||'questions',audio=a.audio||null;
@@ -2541,18 +2567,25 @@ function listeningForm(a){
   onCleanup(()=>{if(ourl)URL.revokeObjectURL(ourl);});
   const fileInp=h('input',{type:'file',accept:'audio/*','aria-label':'Tải file âm thanh',onchange:e=>{const f=e.target.files[0];if(!f)return;if(f.size>100*1048576){toast('File lớn hơn 100 MB. Hãy nén hoặc cắt ngắn bài nghe.','bad');return;}audio=f;drawAudio();}});
   function drawDyn(){
+    if(mode==='questions')gb.redraw();
     dyn.replaceChildren(mode==='dictation'
-      ?field('Bản gốc (đáp án) cho bài chép chính tả',ta,'Mỗi dòng sẽ thành một ô gõ riêng cho học sinh. Hệ thống so từng từ và chỉ ra từ thiếu, thừa, sai.')
-      :hasTest(a)?h('div',{},h('h3',{class:'pane-h'},'KIỂM TRA & SỬA ĐỀ'),h('p',{class:'hint'},'AI đã dựng đề theo đúng format. Cô đọc lại, sửa chỗ sai rồi bấm XEM TRƯỚC + ĐÁP ÁN để kiểm tra lần cuối.'),gb.el):noTestYet('listening'));
+      ?field('Bản gốc (đáp án) cho bài chép full',ta,'Mỗi dòng sẽ thành một ô gõ riêng, học sinh chép lại cả câu. Hệ thống so từng từ và chỉ ra từ thiếu, thừa, sai.')
+      :mode==='dictwords'?field('Bản gốc, từ cần điền đặt trong [ ]',ta,'Ví dụ: The library opens at [nine] o\'clock. Học sinh thấy cả đoạn, chỉ gõ các từ trong [ ]. Nhiều đáp án chấp nhận: [nine | 9].')
+      :h('div',{},h('h3',{class:'pane-h'},'SOẠN & KIỂM TRA ĐỀ'),h('p',{class:'hint'},EDIT_HINT),gb.el));
   }
   const modeEl=h('div',{class:'radio-row',role:'radiogroup','aria-label':'Dạng bài nghe'},
-    [['questions','ĐỀ IELTS (AI dựng đề)'],['dictation','DICTATION (chép chính tả)']].map(([v,l])=>h('label',{class:'radio'},h('input',{type:'radio',name:'lmode',checked:mode===v,onchange:()=>{mode=v;drawDyn();}}),l)));
+    [['questions','ĐỀ IELTS'],['dictation','DICTATION · CHÉP FULL'],['dictwords','DICTATION · ĐIỀN TỪ']].map(([v,l])=>h('label',{class:'radio'},h('input',{type:'radio',name:'lmode',checked:mode===v,onchange:()=>{mode=v;drawDyn();}}),l)));
   drawAudio();drawDyn();
   return {el:[field('Dạng bài nghe',modeEl),field('File âm thanh',h('div',{},fileInp,audioBox),`Chấp nhận mp3, m4a, wav, ogg (tối đa 100 MB). Học sinh được nghe tối đa ${MAX_LISTENS} lần.`),dyn],
     collect(){
       if(!audio)return 'Cần tải lên file âm thanh.';a.mode=mode;a.audio=audio;
-      if(mode==='dictation'){a.transcript=ta.value.trim();a.groups=[];if(!a.transcript)return 'Chưa nhập bản gốc cho bài chép chính tả.';}
-      else{a.transcript='';if(!hasTest(a))return 'Hãy dùng AI đọc đề trước (khung 🤖 ở trên).';}
+      if(mode==='dictation'){a.transcript=ta.value.trim();a.groups.length=0;if(!a.transcript)return 'Chưa nhập bản gốc cho bài chép chính tả.';}
+      else if(mode==='dictwords'){
+        a.transcript=ta.value.trim();
+        const g=dictWordsGroup(a.transcript,a.groups.find(x=>x.preset==='dictwords'));a.groups.splice(0,a.groups.length,g);
+        if(!g.items.length)return 'Hãy đặt các từ cần điền trong dấu [ ], ví dụ: opens at [nine] o\'clock.';
+      }
+      else{a.transcript='';if(!hasTest(a))return 'Chưa có câu hỏi nào.';}
       return null;
     }};
 }
@@ -2572,8 +2605,11 @@ function writingForm(a){
       h('div',{class:'qrow-h'},h('b',{class:'grp-name'},`WRITING TASK ${no}`),h('span',{class:'hint'},no===1?'Mô tả biểu đồ, bảng, quy trình, bản đồ (thường 150 từ)':'Bài luận (thường 250 từ), không cần hình')),
       field('Đề bài',ed.el),no===1?field('Biểu đồ / hình của đề',box):null,field('Số từ tối thiểu',mw))};
   });
-  return {el:[...T.map(x=>x.el),h('p',{class:'hint'},'Chỉ muốn giao 1 task thì để trống task còn lại.')],
+  const aiCb=h('input',{type:'checkbox',checked:a.aiGrade!==false,disabled:!DB.ai});
+  return {el:[...T.map(x=>x.el),h('p',{class:'hint'},'Chỉ muốn giao 1 task thì để trống task còn lại.'),
+      field('Chấm bài',h('label',{class:'inline'},aiCb,'🤖 AI tự chấm khi học sinh nộp'),DB.ai?'Bỏ tích thì cô tự chấm (vẫn bấm AI CHẤM LẠI được khi cần).':'Máy chủ chưa có OPENROUTER_API_KEY nên cô tự chấm.')],
     collect(){
+      a.aiGrade=aiCb.checked;
       a.tasks=T.map(x=>({no:x.no,prompt:x.ed.get(),images:x.no===1?x.imgs:[],minWords:+x.mw.value||0})).filter(t=>htmlText(t.prompt)||t.images.length);
       delete a.prompt;delete a.images;delete a.minWords;
       return a.tasks.length?null:'Cần nhập đề cho ít nhất 1 task.';
@@ -2685,6 +2721,13 @@ VIEWS.tEdit=function({skill,id,draft,ai}){
     go('tEdit',{skill,id,draft:a,ai:res});
   }):null;
   if(ai)setTimeout(()=>aiReport(ai,a),300);
+  // cô chọn dùng AI đọc đề hay tự soạn tay (nhớ lựa chọn trên máy này)
+  let useAI=DB.ai;try{useAI=DB.ai&&localStorage.getItem('iq-ai')!=='off';}catch(e){}
+  const aiWrap=h('div',{hidden:!useAI},aiBox);
+  const aiToggle=objective?field('Cách soạn đề',h('div',{class:'radio-row',role:'radiogroup','aria-label':'Cách soạn đề'},
+    [[true,'🤖 DÙNG AI ĐỌC ĐỀ'],[false,'✍ TỰ SOẠN TAY']].map(([v,l])=>h('label',{class:'radio'},h('input',{type:'radio',name:'aimode',checked:useAI===v,
+      onchange:()=>{useAI=v;aiWrap.hidden=!v;try{localStorage.setItem('iq-ai',v?'on':'off');}catch(e){}}}),l))),
+    'Tự soạn tay: thêm passage và nhóm câu theo dạng IELTS ở phần bên dưới.'):null;
   const prevBtn=objective?h('button',{class:'btn btn-blue',onclick:()=>{keep();previewTest(a);}},'👁 XEM TRƯỚC + ĐÁP ÁN'):null;
   async function save(){
     err.replaceChildren();
@@ -2701,7 +2744,7 @@ VIEWS.tEdit=function({skill,id,draft,ai}){
   return tShell(h('div',{class:'t-content form'},
     field('Tên bài',title),field('Hạn nộp',dl,'Quá hạn học sinh vẫn làm được, nhưng bài bị đánh dấu nộp trễ và học sinh mất 1 mạng.'),objective?null:field('Hướng dẫn ngắn (không bắt buộc)',ins),
     field('Giao cho lớp',cls.length?h('div',{class:'row-btns'},cls):h('p',{class:'hint'},'Chưa có lớp nào (tạo lớp ở tab HỌC SINH).'),'Không chọn lớp nào = giao cho tất cả học sinh.'),
-    aiBox,form.el,err,
+    aiToggle,aiWrap,form.el,err,
     h('div',{class:'foot'},h('button',{class:'btn btn-ghost',onclick:()=>go('tHome',{tab:skill})},'HỦY'),h('span',{class:'row-btns'},prevBtn,saveBtn))),
     {back:()=>go('tHome',{tab:skill}),title:(old?'SỬA BÀI · ':'TẠO BÀI MỚI · ')+SK[skill].en});
 };

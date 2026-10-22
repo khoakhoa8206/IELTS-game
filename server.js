@@ -194,6 +194,7 @@ function problems(a) {
 
 // ===== AI chấm Writing (OpenRouter, xem ai.js) =====
 const ai = AI.enabled;
+const aiOn = a => ai && a.aiGrade !== false; // cô tắt "AI chấm" ở bài Writing thì để cô tự chấm
 const MIME_OF = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf' };
 const mimeOf = p => MIME_OF[String(p).split('.').pop().toLowerCase()];
 // band Writing tổng: Task 2 tính gấp đôi Task 1, làm tròn tới 0.5 như IELTS
@@ -429,14 +430,14 @@ async function studentApi(req, res, M, [r0, r1, r2], user, meInfo) {
       const essays = cleanEssays(a, b.writing);
       if (!essays.some(e => e.words)) fail(400, 'Em chưa viết gì cả!');
       s.writing = { tasks: essays }; s.pasted = Math.max(s.pasted || 0, +b.pasted || 0);
-      s.aiStatus = ai ? 'grading' : 'off';
+      s.aiStatus = aiOn(a) ? 'grading' : 'off';
     } else {
       const miss = (a.questions || []).filter(x => !s.speaking?.items?.[x.id]).length;
       if (miss) fail(400, `Em còn ${miss} câu chưa ghi âm`);
     }
     s.status = 'submitted'; s.submittedAt = Date.now(); s.attempts = (s.attempts || 0) + 1;
     await db.putS(s);
-    if (a.skill === 'writing' && ai) aiGrade(a.id, u);
+    if (a.skill === 'writing' && aiOn(a)) aiGrade(a.id, u);
     const [as, subs] = await Promise.all([db.allA(), db.subsWhere('username', u)]);
     lastCheck = 0; checkLives();
     return send(res, 200, { sub: (await withUrls([s], recsOf))[0], assignment: (await withUrls([a], mediaOf))[0], hearts: livesOf(user, as, subs).hearts });
